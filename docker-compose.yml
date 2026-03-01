@@ -1,8 +1,6 @@
-version: '3.8'
-
 # Khai báo cấu hình chung cho Spark để đỡ phải viết lại nhiều lần
 x-spark-common: &spark-common
-  image: bitnami/spark:3.5
+  image: bitnamilegacy/spark:3.5.1
   user: root 
   volumes:
     - ./conf/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf
@@ -10,7 +8,7 @@ x-spark-common: &spark-common
     - ./data:/opt/bitnami/spark/data 
 
 services:
-  # 1. Lớp Lưu trữ Đối tượng (MinIO - Đóng vai trò như AWS S3 cục bộ)
+  # 1. MinIO
   minio:
     image: minio/minio:latest
     container_name: minio
@@ -24,7 +22,7 @@ services:
     volumes:
       - minio-data:/data
 
-  # 2. Lớp Catalog & Quản lý Phiên bản (Project Nessie - Giống như Git cho Data)
+  # 2. Project Nessie
   nessie:
     image: ghcr.io/projectnessie/nessie:latest
     container_name: nessie
@@ -33,7 +31,7 @@ services:
     environment:
       - QUARKUS_HTTP_PORT=19120
 
-  # 3. Quản đốc phân công công việc (Spark Master)
+  # 3. Spark Master
   spark-master:
     <<: *spark-common # Lấy tất cả cấu hình dùng chung ở trên xuống đây
     container_name: spark-master
@@ -43,7 +41,7 @@ services:
       - "8082:8080" # Cổng để xem giao diện quản lý của Master
       - "7077:7077" # Cổng để các worker và Airflow báo cáo cho Master
 
-  # 4. Công nhân trực tiếp xử lý dữ liệu (Spark Worker)
+  # 4. Spark Worker
   spark-worker:
     <<: *spark-common
     container_name: spark-worker
@@ -57,6 +55,71 @@ services:
     depends_on:
       - spark-master
 
+  # 5. PostgreSQL
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=airflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  # 6. Airflow Init
+  airflow-init:
+    image: apache/airflow:2.10.3
+    container_name: airflow-init
+    depends_on:
+      - postgres
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      - _AIRFLOW_DB_UPGRADE=true
+      - _AIRFLOW_WWW_USER_CREATE=true
+      - _AIRFLOW_WWW_USER_USERNAME=airflow 
+      - _AIRFLOW_WWW_USER_PASSWORD=airflow123
+    command: version
+
+  # 7. Airflow Webserver
+  airflow-webserver:
+    image: apache/airflow:2.10.3
+    container_name: airflow-webserver
+    depends_on:
+      - postgres
+      - airflow-init
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False 
+    ports:
+      - "8080:8080" 
+    volumes:
+      - ./dags:/opt/airflow/dags 
+      - ./logs:/opt/airflow/logs
+      - spark-events:/opt/airflow/spark-events
+    command: webserver
+
+  # 8. Airflow Scheduler
+  airflow-scheduler:
+    image: apache/airflow:2.10.3
+    container_name: airflow-scheduler
+    depends_on:
+      - postgres
+      - airflow-init
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - spark-events:/opt/airflow/spark-events
+    command: scheduler
+
 volumes:
   minio-data:
-  spark-events: # Khai báo thêm volume này để lưu log của Spark
+  postgres-data: # Lưu dữ liệu lịch sử của Airflow
+  spark-events: # Lưu log của Spark
