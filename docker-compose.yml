@@ -5,8 +5,8 @@ x-spark-common: &spark-common
   volumes:
     - ./conf/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf
     - spark-events:/opt/bitnami/spark/events 
-    - ./data:/opt/bitnami/spark/data 
-
+    - ./data:/opt/bitnami/spark/data
+    - ./src:/opt/bitnami/spark/src  
 services:
   # 1. MinIO
   minio:
@@ -21,6 +21,19 @@ services:
     command: server /data --console-address ":9001"
     volumes:
       - minio-data:/data
+
+  # 1b. Tự tạo bucket "warehouse" khi MinIO sẵn sàng
+  minio-init:
+    image: minio/mc:latest
+    container_name: minio-init
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 admin password; do sleep 1; done;
+      mc mb --ignore-existing local/warehouse;
+      echo 'Bucket warehouse created';
+      "
 
   # 2. Project Nessie
   nessie:
