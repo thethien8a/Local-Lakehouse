@@ -4,9 +4,11 @@ x-spark-common: &spark-common
   user: root 
   volumes:
     - ./conf/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf
+    - ./conf/log4j2.properties:/opt/bitnami/spark/conf/log4j2.properties
+    - ./jars:/opt/bitnami/spark/custom-jars
     - spark-events:/opt/bitnami/spark/events 
     - ./data:/opt/bitnami/spark/data
-    - ./src:/opt/bitnami/spark/src  
+    - ./src:/opt/bitnami/spark/src
 services:
   # 1. MinIO
   minio:

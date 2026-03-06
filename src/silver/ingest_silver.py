@@ -1,5 +1,8 @@
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
+import time
+
+BRANCH_NAME = f"etl_silver_{int(time.time())}"
 
 spark = (
     SparkSession.builder
@@ -10,9 +13,14 @@ spark = (
 spark.sparkContext.setLogLevel("WARN")
 print("[INFO] SparkSession đã sẵn sàng!")
 
+# Tạo branch riêng để transform, tránh ảnh hưởng main
+print(f"[INFO] Tạo branch '{BRANCH_NAME}' từ main...")
+spark.sql(f"CREATE BRANCH IF NOT EXISTS `{BRANCH_NAME}` IN nessie FROM main")
+spark.sql(f"USE REFERENCE `{BRANCH_NAME}` IN nessie")
+
 print("[INFO] Đang đọc từ bảng Bronze...")
 df_bronze = spark.table("nessie.taxi.bronze")
-print(f"[INFO] Số dòng Bronze (raw): {df_bronze.count():,}")
+print(f"[INFO] Số dòng Bronze (raw): {df_bronze.count():,}") 
 
 print("[INFO] Đang làm sạch dữ liệu...")
 
@@ -36,11 +44,12 @@ df_cleaned = df_cleaned.filter(F.col("ratecode_id").isin(1,2,3,4,5,6,99))
 # payment_type phải là: 0,1,2,3,4,5,6
 df_cleaned = df_cleaned.filter(F.col("payment_type").isin(0,1,2,3,4,5,6))
 
-# All below columns must be greater than 0
+# Các cột bắt buộc > 0
 must_be_positive = ["fare_amount", "mta_tax", "improvement_surcharge", "total_amount", "trip_distance", "passenger_count"]
 for col in must_be_positive:
     df_cleaned = df_cleaned.filter(F.col(col) > 0)
 
+# Các cột cho phép = 0
 can_be_zero = ["extra", "tip_amount", "tolls_amount", "congestion_surcharge", "Airport_fee"]
 for col in can_be_zero:
     df_cleaned = df_cleaned.filter(F.col(col) >= 0)
@@ -48,8 +57,9 @@ for col in can_be_zero:
 # tpep_pickup_datetime must be before tpep_dropoff_datetime
 df_cleaned = df_cleaned.filter(F.col("tpep_pickup_datetime") <= F.col("tpep_dropoff_datetime"))
 
-print(f"[INFO] Số dòng sau khi làm sạch: {df_cleaned.count():,}")
-print(f"[INFO] Số dòng bị loại: {df_bronze.count() - df_cleaned.count():,}")
+row_count = df_cleaned.count()
+print(f"[INFO] Số dòng sau khi làm sạch: {row_count:,}")
+print(f"[INFO] Số dòng bị loại: {df_bronze.count() - row_count:,}")
 
 # Tạo ra các cột mới (Feature Engineering)
 df_cleaned = df_cleaned.withColumn("is_tip_more_total",
@@ -64,7 +74,29 @@ df_cleaned = df_cleaned.withColumn("is_tip_more_total",
                        .withColumn("is_rush_hour", F.when((F.col("pickup_hour").between(7, 9)) | (F.col("pickup_hour").between(16, 19)), True).otherwise(False)) \
                        .withColumn("fare_per_mile", F.col("total_amount") / F.col("trip_distance")) \
                        .withColumn("fare_per_min", F.col("total_amount") / F.col("trip_duration_min"))
-    
 
-# Tạo bảng silver trong nessie.taxi.silver
+# Ghi vào Silver trên branch
 df_cleaned.write.mode("overwrite").partitionBy("pickup_date").saveAsTable("nessie.taxi.silver")
+print(f"[INFO] Đã ghi Silver trên branch {BRANCH_NAME}.")
+
+# Validate trước khi merge
+df_check = spark.table("nessie.taxi.silver")
+silver_count = df_check.count()
+null_pickup = df_check.filter(F.col("tpep_pickup_datetime").isNull()).count()
+null_total = df_check.filter(F.col("total_amount").isNull()).count()
+
+if silver_count > 0 and null_pickup == 0 and null_total == 0:
+    print(f"[INFO] Validation OK — {silver_count:,} rows, no null pickup/total_amount")
+    print(f"[INFO] Merge branch '{BRANCH_NAME}' vào main...")
+    spark.sql(f"MERGE BRANCH `{BRANCH_NAME}` INTO main IN nessie")
+    print("[INFO] Merge thành công!")
+        
+    # Dọn branch sau khi merge thành công
+    spark.sql(f"DROP BRANCH IF EXISTS `{BRANCH_NAME}` IN nessie")
+    spark.sql("USE REFERENCE main IN nessie")
+else:
+    print(f"[ERROR] Validation FAILED — rows: {silver_count}, null_pickup: {null_pickup}, null_total: {null_total}")
+    print(f"[ERROR] KHÔNG merge. Branch '{BRANCH_NAME}' giữ nguyên để debug.")
+
+spark.stop()
+print("[INFO] Hoàn tất Silver Transformation!")
