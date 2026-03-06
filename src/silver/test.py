@@ -4,7 +4,8 @@ from pyspark.sql import functions as F
 spark = SparkSession.builder.appName("Silver Test").getOrCreate()
 spark.sparkContext.setLogLevel("WARN")
 
-df = spark.table("nessie.taxi.bronze")
+df = spark.table("nessie.taxi.silver")
 
+df.show(10)
 # Hiển thị schema (kiểu dữ liệu của các cột)
 df.printSchema()

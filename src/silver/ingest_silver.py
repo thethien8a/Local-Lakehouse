@@ -36,10 +36,10 @@ df_cleaned = df_bronze.filter(
 df_cleaned = df_cleaned.filter(F.col("tpep_pickup_datetime") >= "2024-01-01")
 
 # vendor_id phải là: 1,2,6,7
-df_cleaned = df_cleaned.filter(F.col("vendor_id").isin(1,2,6,7))
+df_cleaned = df_cleaned.filter(F.col("VendorID").isin(1,2,6,7))
 
 # ratecode_id phải là: 1,2,3,4,5,6,99
-df_cleaned = df_cleaned.filter(F.col("ratecode_id").isin(1,2,3,4,5,6,99))
+df_cleaned = df_cleaned.filter(F.col("RatecodeID").isin(1,2,3,4,5,6,99))
 
 # payment_type phải là: 0,1,2,3,4,5,6
 df_cleaned = df_cleaned.filter(F.col("payment_type").isin(0,1,2,3,4,5,6))
