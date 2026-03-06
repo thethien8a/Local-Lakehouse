@@ -1,0 +1,70 @@
+from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
+
+spark = (
+    SparkSession.builder
+    .appName("Silver Transformation - NYC Taxi")
+    .getOrCreate()
+)
+
+spark.sparkContext.setLogLevel("WARN")
+print("[INFO] SparkSession đã sẵn sàng!")
+
+print("[INFO] Đang đọc từ bảng Bronze...")
+df_bronze = spark.table("nessie.taxi.bronze")
+print(f"[INFO] Số dòng Bronze (raw): {df_bronze.count():,}")
+
+print("[INFO] Đang làm sạch dữ liệu...")
+
+
+# Loại bỏ các dòng null ở tpep_pickup_datetime và tpep_dropoff_datetime
+df_cleaned = df_bronze.filter(
+    F.col("tpep_pickup_datetime").isNotNull() & 
+    F.col("tpep_dropoff_datetime").isNotNull()
+)
+
+
+# Xét thời gian chỉ từ 1-2024
+df_cleaned = df_cleaned.filter(F.col("tpep_pickup_datetime") >= "2024-01-01")
+
+# vendor_id phải là: 1,2,6,7
+df_cleaned = df_cleaned.filter(F.col("vendor_id").isin(1,2,6,7))
+
+# ratecode_id phải là: 1,2,3,4,5,6,99
+df_cleaned = df_cleaned.filter(F.col("ratecode_id").isin(1,2,3,4,5,6,99))
+
+# payment_type phải là: 0,1,2,3,4,5,6
+df_cleaned = df_cleaned.filter(F.col("payment_type").isin(0,1,2,3,4,5,6))
+
+# All below columns must be greater than 0
+must_be_positive = ["fare_amount", "mta_tax", "improvement_surcharge", "total_amount", "trip_distance", "passenger_count"]
+for col in must_be_positive:
+    df_cleaned = df_cleaned.filter(F.col(col) > 0)
+
+can_be_zero = ["extra", "tip_amount", "tolls_amount", "congestion_surcharge", "Airport_fee"]
+for col in can_be_zero:
+    df_cleaned = df_cleaned.filter(F.col(col) >= 0)
+
+# tpep_pickup_datetime must be before tpep_dropoff_datetime
+df_cleaned = df_cleaned.filter(F.col("tpep_pickup_datetime") <= F.col("tpep_dropoff_datetime"))
+
+print(f"[INFO] Số dòng sau khi làm sạch: {df_cleaned.count():,}")
+print(f"[INFO] Số dòng bị loại: {df_bronze.count() - df_cleaned.count():,}")
+
+# Tạo ra các cột mới (Feature Engineering)
+df_cleaned = df_cleaned.withColumn("is_tip_more_total",
+                                   F.when(F.col("tip_amount") > F.col("total_amount"), True).otherwise(False)) \
+                       .withColumn("pickup_date", F.date_format(F.col("tpep_pickup_datetime"), "yyyy-MM-dd")) \
+                       .withColumn("pickup_hour", F.hour(F.col("tpep_pickup_datetime"))) \
+                       .withColumn("pickup_weekday", F.dayofweek(F.col("tpep_pickup_datetime"))) \
+                       .withColumn("is_weekend", F.when(F.col("pickup_weekday").isin(1,7), True).otherwise(False)) \
+                       .withColumn("time_bucket", F.when(F.col("pickup_hour").between(0,6), "early_morning").when(F.col("pickup_hour").between(7,12), "morning").when(F.col("pickup_hour").between(13,18), "afternoon").otherwise("evening")) \
+                       .withColumn("trip_duration_min", (F.unix_timestamp("tpep_dropoff_datetime") - F.unix_timestamp("tpep_pickup_datetime")) / 60) \
+                       .withColumn("avg_speed_mph", F.col("trip_distance") * 60 / F.col("trip_duration_min")) \
+                       .withColumn("is_rush_hour", F.when((F.col("pickup_hour").between(7, 9)) | (F.col("pickup_hour").between(16, 19)), True).otherwise(False)) \
+                       .withColumn("fare_per_mile", F.col("total_amount") / F.col("trip_distance")) \
+                       .withColumn("fare_per_min", F.col("total_amount") / F.col("trip_duration_min"))
+    
+
+# Tạo bảng silver trong nessie.taxi.silver
+df_cleaned.write.mode("overwrite").partitionBy("pickup_date").saveAsTable("nessie.taxi.silver")
