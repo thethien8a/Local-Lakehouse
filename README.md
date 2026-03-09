@@ -22,10 +22,10 @@ Các dịch vụ được triển khai thông qua **Docker Compose**:
 | :--- | :--- | :--- | :--- |
 | **MinIO** | `minio/minio` | Lưu trữ đối tượng S3-compatible | `9000` (API), `9001` (UI) |
 | **Nessie** | `ghcr.io/projectnessie/nessie`| Catalog quản lý phiên bản dữ liệu | `19120` |
-| **Spark Master** | `bitnami/spark:3.5` | Điều phối cụm tính toán | `7077`, `8080` (UI) |
-| **Spark Worker** | `bitnami/spark:3.5` | Thực thi các tác vụ xử lý dữ liệu | `8081` (UI) |
+| **Spark Master** | `bitnamilegacy/spark:3.5.1` | Điều phối cụm tính toán | `7077`, `8080` (UI) |
+| **Spark Worker** | `bitnamilegacy/spark:3.5.1` | Thực thi các tác vụ xử lý dữ liệu | `8081` (UI) |
 | **Airflow** | `apache/airflow:2.10.x` | Điều phối quy trình tự động (DAGs)| `8080` (UI) |
-| **PostgreSQL**| `postgres:13` | Lưu trữ metadata cho Airflow | `5432` |
+| **PostgreSQL**| `postgres:15` | Lưu trữ metadata cho Airflow | `5432` |
 
 ---
 
@@ -107,6 +107,63 @@ Dự án áp dụng mô hình **Write-Audit-Publish (WAP)** thông qua Nessie Br
 Hệ thống cho phép truy vấn dữ liệu theo các thời điểm cụ thể trong quá khứ thông qua `AT TIMESTAMP` hoặc `AT SNAPSHOT`.
 
 ---
+
+## 🧪 WAP Thực tế với Nessie (Production-Friendly)
+
+Script `src/silver/ingest_silver.py` hiện hỗ trợ chạy theo từng bước độc lập để bám đúng mô hình orchestrator thực tế:
+
+1. `write`: Tạo branch-per-run và ghi dữ liệu Silver lên branch đó.
+2. `audit`: Chạy quality gates trên chính branch vừa ghi.
+3. `publish`: Audit lại + merge branch vào `main` với retry/backoff.
+4. `all`: Chạy full pipeline write → audit → publish (hợp cho local test nhanh).
+
+### Chạy đúng môi trường (trong Spark container)
+
+```bash
+docker compose exec spark-master spark-submit /opt/bitnami/spark/src/silver/ingest_silver.py
+```
+
+### Chạy tách bước (khuyến nghị cho Airflow DAG)
+
+```bash
+# 1) WRITE - tạo branch theo run id
+docker compose exec \
+  -e WAP_MODE=write \
+  -e WAP_RUN_ID=manual_20260307_0900 \
+  spark-master \
+  spark-submit /opt/bitnami/spark/src/silver/ingest_silver.py
+
+# 2) AUDIT - kiểm định branch vừa ghi
+docker compose exec \
+  -e WAP_MODE=audit \
+  -e NESSIE_WAP_BRANCH=etl_silver_manual_20260307_0900_20260307T090012Z_abc12345 \
+  spark-master \
+  spark-submit /opt/bitnami/spark/src/silver/ingest_silver.py
+
+# 3) PUBLISH - merge có retry, sau đó drop branch đã publish
+docker compose exec \
+  -e WAP_MODE=publish \
+  -e NESSIE_WAP_BRANCH=etl_silver_manual_20260307_0900_20260307T090012Z_abc12345 \
+  -e WAP_MERGE_MAX_RETRIES=5 \
+  spark-master \
+  spark-submit /opt/bitnami/spark/src/silver/ingest_silver.py
+```
+
+### Biến môi trường quan trọng cho Nessie WAP
+
+| Biến | Mặc định | Ý nghĩa |
+| :--- | :--- | :--- |
+| `WAP_MODE` | `all` | Chọn mode `write/audit/publish/all`. |
+| `WAP_RUN_ID` | `adhoc` | Run ID nghiệp vụ (script tự append thêm UTC timestamp + UUID để luôn unique). |
+| `WAP_BRANCH_PREFIX` | `etl_silver` | Prefix cho branch WAP phục vụ cleanup theo TTL. |
+| `NESSIE_WAP_BRANCH` | auto-generated | Ép dùng branch cụ thể (audit/publish). |
+| `WAP_MERGE_MAX_RETRIES` | `3` | Số lần retry khi `MERGE BRANCH` gặp conflict/lỗi tạm thời. |
+| `WAP_MERGE_BASE_BACKOFF_SEC` | `5` | Backoff cơ bản (giây) giữa các lần retry merge. |
+| `WAP_CLEANUP_STALE_BRANCHES` | `true` | Bật cleanup các branch cũ theo TTL. |
+| `WAP_BRANCH_RETENTION_HOURS` | `72` | TTL cho branch cũ cùng prefix `etl_silver_*`. |
+| `WAP_EXPIRE_SNAPSHOTS` | `false` | Bật gọi `expire_snapshots` sau khi publish thành công. |
+| `WAP_SNAPSHOT_RETENTION_DAYS` | `14` | Số ngày giữ snapshot khi cleanup. |
+| `SILVER_MIN_KEEP_RATIO` | `0.20` | Ngưỡng tỷ lệ dữ liệu giữ lại sau clean (`silver/bronze`). |
 
 ## 🧹 Vận hành và Tối ưu hóa (Maintenance)
 

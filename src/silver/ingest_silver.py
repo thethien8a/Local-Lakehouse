@@ -75,6 +75,12 @@ df_cleaned = df_cleaned.withColumn("is_tip_more_total",
                        .withColumn("fare_per_mile", F.col("total_amount") / F.col("trip_distance")) \
                        .withColumn("fare_per_min", F.col("total_amount") / F.col("trip_duration_min"))
 
+df_cleaned = df_cleaned.withColumnRenamed("VendorID", "vendor_id") \
+                       .withColumnRenamed("RatecodeID", "ratecode_id") \
+                       .withColumnRenamed("PULocationID", "pulocation_id") \
+                       .withColumnRenamed("DOLocationID", "dolocation_id") \
+                       .withColumnRenamed("Airport_fee", "airport_fee")
+
 # Ghi vào Silver trên branch
 df_cleaned.write.mode("overwrite").partitionBy("pickup_date").saveAsTable("nessie.taxi.silver")
 print(f"[INFO] Đã ghi Silver trên branch {BRANCH_NAME}.")
@@ -90,10 +96,14 @@ if silver_count > 0 and null_pickup == 0 and null_total == 0:
     print(f"[INFO] Merge branch '{BRANCH_NAME}' vào main...")
     spark.sql(f"MERGE BRANCH `{BRANCH_NAME}` INTO main IN nessie")
     print("[INFO] Merge thành công!")
-        
+    
     # Dọn branch sau khi merge thành công
     spark.sql(f"DROP BRANCH IF EXISTS `{BRANCH_NAME}` IN nessie")
     spark.sql("USE REFERENCE main IN nessie")
+    
+    print("[INFO] Schema của bảng Silver:")
+    df_cleaned.printSchema()
+    
 else:
     print(f"[ERROR] Validation FAILED — rows: {silver_count}, null_pickup: {null_pickup}, null_total: {null_total}")
     print(f"[ERROR] KHÔNG merge. Branch '{BRANCH_NAME}' giữ nguyên để debug.")
