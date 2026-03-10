@@ -91,6 +91,8 @@ silver_count = df_check.count()
 null_pickup = df_check.filter(F.col("tpep_pickup_datetime").isNull()).count()
 null_total = df_check.filter(F.col("total_amount").isNull()).count()
 
+
+
 if silver_count > 0 and null_pickup == 0 and null_total == 0:
     print(f"[INFO] Validation OK — {silver_count:,} rows, no null pickup/total_amount")
     print(f"[INFO] Merge branch '{BRANCH_NAME}' vào main...")
@@ -99,6 +101,7 @@ if silver_count > 0 and null_pickup == 0 and null_total == 0:
     
     # Dọn branch sau khi merge thành công
     spark.sql(f"DROP BRANCH IF EXISTS `{BRANCH_NAME}` IN nessie")
+
     spark.sql("USE REFERENCE main IN nessie")
     
     print("[INFO] Schema của bảng Silver:")
