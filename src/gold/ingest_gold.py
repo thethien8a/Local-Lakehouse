@@ -185,7 +185,6 @@ def main() -> None:
     spark.sql("USE REFERENCE main IN nessie")
     spark.sql(f"DROP BRANCH IF EXISTS `{BRANCH_NAME}` IN nessie")
     
-    
     print("[INFO] Hoàn tất Gold Transformation!")
     spark.stop()
 
