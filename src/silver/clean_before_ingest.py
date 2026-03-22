@@ -66,6 +66,23 @@ def feature_engineering(df: DataFrame) -> DataFrame:
     Feature engineering cho dữ liệu Silver.
     """
     
+    # Generate unique trip_id using MD5 hash of key columns
+    # This ensures deterministic IDs for idempotent pipeline
+    df = df.withColumn(
+        "trip_id",
+        F.md5(
+            F.concat_ws(
+                "|",
+                F.col("VendorID").cast("string"),
+                F.col("tpep_pickup_datetime").cast("string"),
+                F.col("tpep_dropoff_datetime").cast("string"),
+                F.col("PULocationID").cast("string"),
+                F.col("DOLocationID").cast("string"),
+                F.col("fare_amount").cast("string")
+            )
+        )
+    )
+    
     # Feature Engineering
     df = (
         df.withColumn(
