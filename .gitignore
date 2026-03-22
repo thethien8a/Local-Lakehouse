@@ -1,6 +1,7 @@
 logs/
 __pycache__/
-data/
 venv/
 .serena/
 jars/
+data/landing
+data/nyc_taxi_data.parquet
