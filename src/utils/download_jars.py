@@ -16,18 +16,18 @@ def main():
     
     os.makedirs(jars_dir, exist_ok=True)
     
-    print(f"[INFO] Checking and downloading jar files to: {jars_dir}")
+    print(f"Checking and downloading jar files to: {jars_dir}")
     for url in JARS:
         filename = url.split("/")[-1]
         filepath = os.path.join(jars_dir, filename)
         if not os.path.exists(filepath):
-            print(f"[INFO] Downloading {filename}...")
+            print(f"Downloading {filename}...")
             urllib.request.urlretrieve(url, filepath)
-            print(f"[INFO] Downloaded {filename}.")
+            print(f"Downloaded {filename}.")
         else:
-            print(f"[INFO] File {filename} already exists, skipping.")
+            print(f"File {filename} already exists, skipping.")
             
-    print("[INFO] Jar download complete!")
+    print("Jar download complete!")
 
 if __name__ == "__main__":
     main()

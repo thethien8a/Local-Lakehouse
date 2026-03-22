@@ -21,7 +21,7 @@ def split_data():
     
     df_filtered.write.mode("overwrite").partitionBy("date").parquet(LANDING_ZONE_PATH)
     
-    print("[INFO] Đã chia nhỏ dữ liệu thành công!")
+    print("Đã chia nhỏ dữ liệu thành công!")
     spark.stop()
 
 if __name__ == "__main__":

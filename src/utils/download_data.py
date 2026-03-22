@@ -17,16 +17,16 @@ def download_nyc_taxi_data():
     # Kiểm tra xem thư mục data đã tồn tại chưa
     if not os.path.exists(DATA_DIR):
         os.makedirs(DATA_DIR)
-        print(f"[INFO] Đã tạo thư mục: {DATA_DIR}")
+        print(f"Đã tạo thư mục: {DATA_DIR}")
         
-    print(f"[INFO] Đang tải dữ liệu từ {url}...")
-    print("[INFO] Vui lòng đợi một chút, file nặng khoảng 50MB...")
+    print(f"Đang tải dữ liệu từ {url}...")
+    print("Vui lòng đợi một chút, file nặng khoảng 50MB...")
     
     try:
         urllib.request.urlretrieve(url, output_file)
-        print(f"[INFO] Tải thành công! File đã được lưu tại: {output_file}")
+        print(f"Tải thành công! File đã được lưu tại: {output_file}")
     except Exception as e:
-        print(f"[ERROR] Lỗi khi tải file: {e}")
+        print(f"ERROR: Lỗi khi tải file: {e}")
 
 if __name__ == "__main__":
     download_nyc_taxi_data()
