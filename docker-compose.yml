@@ -45,6 +45,10 @@ services:
       - "19120:19120" # Cổng để Spark và các engine khác giao tiếp
     environment:
       - QUARKUS_HTTP_PORT=19120
+      - NESSIE_VERSION_STORE_TYPE=ROCKSDB
+      - NESSIE_VERSION_STORE_PERSIST_ROCKS_DATABASE_PATH=/nessie/data
+    volumes:
+      - nessie-data:/nessie/data
 
   # 3. Spark Master
   spark-master:
@@ -136,5 +140,6 @@ services:
 
 volumes:
   minio-data:
+  nessie-data: # Lưu metadata catalog (RocksDB) để bảng không bị mất khi restart
   postgres-data: # Lưu dữ liệu lịch sử của Airflow
   spark-events: # Lưu log của Spark
