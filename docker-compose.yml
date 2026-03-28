@@ -41,16 +41,53 @@ services:
   nessie:
     image: ghcr.io/projectnessie/nessie:latest
     container_name: nessie
+    user: root
     ports:
       - "19120:19120" # Cổng để Spark và các engine khác giao tiếp
     environment:
       - QUARKUS_HTTP_PORT=19120
       - NESSIE_VERSION_STORE_TYPE=ROCKSDB
       - NESSIE_VERSION_STORE_PERSIST_ROCKS_DATABASE_PATH=/nessie/data
+      # Cấu hình Iceberg REST catalog — bắt buộc để Trino dùng REST endpoint
+      - NESSIE_CATALOG_DEFAULT_WAREHOUSE=warehouse
+      - NESSIE_CATALOG_WAREHOUSES_WAREHOUSE_LOCATION=s3://warehouse/
+      # Cấu hình S3/MinIO cho Nessie Iceberg REST
+      - NESSIE_CATALOG_SERVICE_S3_DEFAULT_OPTIONS_ENDPOINT=http://minio:9000
+      - NESSIE_CATALOG_SERVICE_S3_DEFAULT_OPTIONS_PATH_STYLE_ACCESS=true
+      - NESSIE_CATALOG_SERVICE_S3_DEFAULT_OPTIONS_REGION=us-east-1
+      # Access key dùng cơ chế URN secret của Nessie (Quarkus SmallRye Config)
+      - NESSIE_CATALOG_SERVICE_S3_DEFAULT_OPTIONS_ACCESS_KEY=urn:nessie-secret:quarkus:s3creds
+      - S3CREDS_NAME=admin
+      - S3CREDS_SECRET=password
     volumes:
       - nessie-data:/nessie/data
 
-  # 3. Spark Master
+  # 3. Trino (SQL Query Engine - đọc/phân tích dữ liệu từ Iceberg tables)
+  trino:
+    image: trinodb/trino:443
+    container_name: trino
+    ports:
+      - "8083:8080" # Cổng UI + SQL endpoint
+    volumes:
+      - ./conf/trino/catalog:/etc/trino/catalog # Mount catalog config
+    depends_on:
+      - minio
+      - nessie
+
+  # 3b. Metabase (BI Dashboard - trực quan hoá dữ liệu từ Trino)
+  metabase:
+    image: metabase/metabase:latest
+    container_name: metabase
+    ports:
+      - "3000:3000" # Cổng UI
+    environment:
+      - MB_JETTY_PORT=3000
+    volumes:
+      - metabase-data:/metabase-data
+    depends_on:
+      - trino
+
+  # 4. Spark Master
   spark-master:
     <<: *spark-common # Lấy tất cả cấu hình dùng chung ở trên xuống đây
     container_name: spark-master
@@ -60,7 +97,7 @@ services:
       - "8082:8080" # Cổng để xem giao diện quản lý của Master
       - "7077:7077" # Cổng để các worker và Airflow báo cáo cho Master
 
-  # 4. Spark Worker
+  # 5. Spark Worker
   spark-worker:
     <<: *spark-common
     container_name: spark-worker
@@ -74,7 +111,7 @@ services:
     depends_on:
       - spark-master
 
-  # 5. PostgreSQL
+  # 6. PostgreSQL
   postgres:
     image: postgres:15
     container_name: postgres
@@ -87,7 +124,7 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
 
-  # 6. Airflow Init
+  # 7. Airflow Init
   airflow-init:
     image: apache/airflow:2.10.3
     container_name: airflow-init
@@ -102,7 +139,7 @@ services:
       - _AIRFLOW_WWW_USER_PASSWORD=airflow123
     command: version
 
-  # 7. Airflow Webserver
+  # 8. Airflow Webserver
   airflow-webserver:
     image: apache/airflow:2.10.3
     container_name: airflow-webserver
@@ -121,7 +158,7 @@ services:
       - spark-events:/opt/airflow/spark-events
     command: webserver
 
-  # 8. Airflow Scheduler
+  # 9. Airflow Scheduler
   airflow-scheduler:
     image: apache/airflow:2.10.3
     container_name: airflow-scheduler
@@ -142,4 +179,5 @@ volumes:
   minio-data:
   nessie-data: # Lưu metadata catalog (RocksDB) để bảng không bị mất khi restart
   postgres-data: # Lưu dữ liệu lịch sử của Airflow
-  spark-events: # Lưu log của Spark
+  metabase-data: # Lưu cấu hình Metabase (H2 embedded DB)
+  spark-events: # Lưu dữ liệu spark
