@@ -153,8 +153,8 @@ services:
     ports:
       - "8080:8080" 
     volumes:
-      - ./dags:/opt/airflow/dags 
-      - ./logs:/opt/airflow/logs
+      - ./src/airflow/dags:/opt/airflow/dags 
+      - ./src/airflow/logs:/opt/airflow/logs
       - spark-events:/opt/airflow/spark-events
     command: webserver
 
@@ -170,8 +170,8 @@ services:
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
     volumes:
-      - ./dags:/opt/airflow/dags
-      - ./logs:/opt/airflow/logs
+      - ./src/airflow/dags:/opt/airflow/dags
+      - ./src/airflow/logs:/opt/airflow/logs
       - spark-events:/opt/airflow/spark-events
     command: scheduler
 
