@@ -89,7 +89,7 @@ services:
 
   # 4. Spark Master
   spark-master:
-    <<: *spark-common # Lấy tất cả cấu hình dùng chung ở trên xuống đây
+    <<: *spark-common
     container_name: spark-master
     environment:
       - SPARK_MODE=master
@@ -126,7 +126,7 @@ services:
 
   # 7. Airflow Init
   airflow-init:
-    image: apache/airflow:2.10.3
+    build: ./docker/airflow
     container_name: airflow-init
     depends_on:
       - postgres
@@ -137,11 +137,11 @@ services:
       - _AIRFLOW_WWW_USER_CREATE=true
       - _AIRFLOW_WWW_USER_USERNAME=airflow 
       - _AIRFLOW_WWW_USER_PASSWORD=airflow123
-    command: version
+    command: airflow db init
 
   # 8. Airflow Webserver
   airflow-webserver:
-    image: apache/airflow:2.10.3
+    build: ./docker/airflow
     container_name: airflow-webserver
     depends_on:
       - postgres
@@ -149,7 +149,8 @@ services:
     environment:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
-      - AIRFLOW__CORE__LOAD_EXAMPLES=False 
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW_CONN_SPARK_DEFAULT=spark://spark-master:7077
     ports:
       - "8080:8080" 
     volumes:
@@ -158,9 +159,9 @@ services:
       - spark-events:/opt/airflow/spark-events
     command: webserver
 
-  # 9. Airflow Scheduler
+  # 9. Airflow Scheduler (chạy spark-submit → cần Spark config, jars, source code)
   airflow-scheduler:
-    image: apache/airflow:2.10.3
+    build: ./docker/airflow
     container_name: airflow-scheduler
     depends_on:
       - postgres
@@ -169,10 +170,17 @@ services:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW_CONN_SPARK_DEFAULT=spark://spark-master:7077
+      - PYTHONPATH=/opt/bitnami/spark
     volumes:
       - ./src/airflow/dags:/opt/airflow/dags
       - ./src/airflow/logs:/opt/airflow/logs
       - spark-events:/opt/airflow/spark-events
+      - ./src:/opt/bitnami/spark/src
+      - ./data:/opt/bitnami/spark/data
+      - ./conf/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf
+      - ./conf/log4j2.properties:/opt/spark/conf/log4j2.properties
+      - ./jars:/opt/bitnami/spark/custom-jars
     command: scheduler
 
 volumes:

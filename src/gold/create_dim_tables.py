@@ -7,9 +7,9 @@ logger = logging.getLogger(__name__)
 
 
 def create_dim_tables(spark: SparkSession) -> None:
-    """Tạo các bảng dimension nếu chưa tồn tại"""
+    """Tạo các bảng dimension cho Star Schema"""
 
-    # dim_zone: từ file CSV của NYC TLC
+    # dim_zone: lookup tên khu vực cho bar chart Top 10 pickup locations
     if not spark.catalog.tableExists("nessie.taxi.dim_zone"):
         logger.info("Tạo dim_zone từ taxi_zone_lookup.csv...")
         try:
@@ -22,7 +22,7 @@ def create_dim_tables(spark: SparkSession) -> None:
             spark.stop()
             raise
 
-    # dim_payment: theo data dictionary NYC TLC
+    # dim_payment: lookup tên phương thức thanh toán cho donut chart
     if not spark.catalog.tableExists("nessie.taxi.dim_payment"):
         logger.info("Tạo dim_payment...")
         df_payment = spark.createDataFrame([
@@ -35,28 +35,3 @@ def create_dim_tables(spark: SparkSession) -> None:
             (6, "Voided trip"),
         ], ["payment_type", "payment_name"])
         write_dim_table(df_payment, "nessie.taxi.dim_payment")
-
-    # dim_vendor: theo data dictionary NYC TLC
-    if not spark.catalog.tableExists("nessie.taxi.dim_vendor"):
-        logger.info("Tạo dim_vendor...")
-        df_vendor = spark.createDataFrame([
-            (1, "Creative Mobile Technologies"),
-            (2, "VeriFone Inc."),
-            (6, "Mautro"),
-            (7, "NYMT"),
-        ], ["vendor_id", "vendor_name"])
-        write_dim_table(df_vendor, "nessie.taxi.dim_vendor")
-
-    # dim_ratecode: theo data dictionary NYC TLC
-    if not spark.catalog.tableExists("nessie.taxi.dim_ratecode"):
-        logger.info("Tạo dim_ratecode...")
-        df_ratecode = spark.createDataFrame([
-            (1, "Standard rate"),
-            (2, "JFK"),
-            (3, "Newark"),
-            (4, "Nassau or Westchester"),
-            (5, "Negotiated fare"),
-            (6, "Group ride"),
-            (99, "Unknown"),
-        ], ["ratecode_id", "ratecode_name"])
-        write_dim_table(df_ratecode, "nessie.taxi.dim_ratecode")

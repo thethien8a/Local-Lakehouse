@@ -30,12 +30,13 @@ def main():
         if df_bronze is None:
             spark.stop()
             return
-
+        
+        silver_table = "nessie.taxi.silver"
         if args.date is None:
             # Tự động xử lý các dữ liệu chưa được xử lý ở bronze
             logger.info("Tự động xử lý các dữ liệu chưa được xử lý ở bronze")
             # Kiểm tra xem có dữ liệu nào ở silver
-            silver_table = "nessie.taxi.silver"
+
             if spark.catalog.tableExists(silver_table):
                 logger.info(f"Bảng {silver_table} đã tồn tại. Đang kiểm tra dữ ")
                 
@@ -102,7 +103,7 @@ def main():
 
             logger.info("Merge thành công!")
             spark.sql(f"DROP BRANCH IF EXISTS `{BRANCH_NAME}` IN nessie")
-            
+            logger.info(f"Drop branch '{BRANCH_NAME}' thành công!")
         else:
             logger.error(f"Validation FAILED. KHÔNG merge. Branch '{BRANCH_NAME}' giữ nguyên để debug.")
 
