@@ -97,7 +97,13 @@ services:
     ports:
       - "8082:8080" # Cổng để xem giao diện quản lý của Master
       - "7077:7077" # Cổng để các worker và Airflow báo cáo cho Master
-    command: bash -c "/usr/sbin/sshd && /opt/bitnami/scripts/spark/run.sh"
+      - "22:22"   # Cổng SSH
+    healthcheck:
+      test: ["CMD", "pgrep", "sshd"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 15s
 
   # 5. Spark Worker
   spark-worker:
@@ -164,9 +170,12 @@ services:
     build: ./docker/airflow
     container_name: airflow-scheduler
     depends_on:
-      - postgres
-      - airflow-init
-      - spark-master
+      postgres:
+        condition: service_started
+      airflow-init:
+        condition: service_completed_successfully
+      spark-master:
+        condition: service_healthy
     environment:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
