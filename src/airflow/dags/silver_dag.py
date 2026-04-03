@@ -1,13 +1,13 @@
 from airflow import DAG
 from airflow.models.param import Param
-from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
-from dags_conf import BRONZE_DATASET, SILVER_DATASET, SPARK_CONN_ID, DEFAULT_ARGS
+from airflow.providers.ssh.operators.ssh import SSHOperator
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
+from dags_conf import SSH_CONN_ID, SPARK_SUBMIT, DEFAULT_ARGS
 
 with DAG(
     dag_id="silver_transformation",
     default_args=DEFAULT_ARGS,
-    description="Transform dữ liệu từ Bronze sang Silver",
-    schedule=[BRONZE_DATASET],
+    schedule=None,
     catchup=False,
     tags=["lakehouse", "silver"],
     params={
@@ -23,15 +23,26 @@ with DAG(
         ),
     },
 ) as silver_dag:
-    silver_task = SparkSubmitOperator(
+    silver_task = SSHOperator(
         task_id="ingest_silver",
-        application="/opt/bitnami/spark/src/silver/ingest_silver.py",
-        name="silver_transformation",
-        conn_id=SPARK_CONN_ID,
-        application_args=[
-            "--date_from", "{{ params.date_from if params.date_from else ds }}",
-            "--date_to", "{{ params.date_to if params.date_to else ds }}",
-        ],
-        env_vars={"PYTHONPATH": "/opt/bitnami/spark"},
-        outlets=[SILVER_DATASET],
+        ssh_conn_id=SSH_CONN_ID,
+        command=(
+            f"{SPARK_SUBMIT}"
+            "/opt/bitnami/spark/src/pipeline/silver/ingest_silver.py "
+            '--date_from {{ dag_run.conf.get("date_from", ds) }} '
+            '--date_to {{ dag_run.conf.get("date_to", ds) }}'
+        ),
     )
+
+    trigger_gold = TriggerDagRunOperator(
+        task_id="trigger_gold",
+        trigger_dag_id="gold_aggregation",
+        conf={
+            "date_from": "{{ dag_run.conf.get('date_from', ds) }}",
+            "date_to": "{{ dag_run.conf.get('date_to', ds) }}",
+        },
+        wait_for_completion=False,
+        reset_dag_run=True,
+    )
+
+    silver_task >> trigger_gold

@@ -1,12 +1,12 @@
 from airflow import DAG
 from airflow.models.param import Param
-from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
-from dags_conf import BRONZE_DATASET, SPARK_CONN_ID, DEFAULT_ARGS
+from airflow.providers.ssh.operators.ssh import SSHOperator
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
+from dags_conf import SSH_CONN_ID, SPARK_SUBMIT, DEFAULT_ARGS
 
 with DAG(
     dag_id="bronze_ingestion",
     default_args=DEFAULT_ARGS,
-    description="Ingest dữ liệu thô vào Bronze layer",
     schedule="0 1 * * *",
     catchup=False,
     tags=["lakehouse", "bronze"],
@@ -23,15 +23,26 @@ with DAG(
         ),
     },
 ) as bronze_dag:
-    bronze_task = SparkSubmitOperator(
+    bronze_task = SSHOperator(
         task_id="ingest_bronze",
-        application="/opt/bitnami/spark/src/bronze/ingest_bronze.py",
-        name="bronze_ingestion",
-        conn_id=SPARK_CONN_ID,
-        application_args=[
-            "--date_from", "{{ params.date_from if params.date_from else ds }}",
-            "--date_to", "{{ params.date_to if params.date_to else ds }}",
-        ],
-        env_vars={"PYTHONPATH": "/opt/bitnami/spark"},
-        outlets=[BRONZE_DATASET],
+        ssh_conn_id=SSH_CONN_ID,
+        command=(
+            f"{SPARK_SUBMIT}"
+            "/opt/bitnami/spark/src/pipeline/bronze/ingest_bronze.py "
+            '--date_from {{ params.date_from if params.date_from else ds }} '
+            '--date_to {{ params.date_to if params.date_to else ds }}'
+        ),
     )
+
+    trigger_silver = TriggerDagRunOperator(
+        task_id="trigger_silver",
+        trigger_dag_id="silver_transformation",
+        conf={
+            "date_from": "{{ params.date_from if params.date_from else ds }}",
+            "date_to": "{{ params.date_to if params.date_to else ds }}",
+        },
+        wait_for_completion=False,
+        reset_dag_run=True,
+    )
+
+    bronze_task >> trigger_silver

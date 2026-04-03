@@ -1,13 +1,12 @@
 from airflow import DAG
 from airflow.models.param import Param
-from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
-from dags_conf import SILVER_DATASET, GOLD_DATASET, SPARK_CONN_ID, DEFAULT_ARGS
+from airflow.providers.ssh.operators.ssh import SSHOperator
+from dags_conf import SSH_CONN_ID, SPARK_SUBMIT, DEFAULT_ARGS
 
 with DAG(
-    dag_id="gold_transformation",
+    dag_id="gold_aggregation",
     default_args=DEFAULT_ARGS,
-    description="Tạo Gold tables từ Silver",
-    schedule=[SILVER_DATASET],
+    schedule=None,
     catchup=False,
     tags=["lakehouse", "gold"],
     params={
@@ -23,18 +22,13 @@ with DAG(
         ),
     },
 ) as gold_dag:
-    gold_task = SparkSubmitOperator(
+    gold_task = SSHOperator(
         task_id="ingest_gold",
-        application="/opt/bitnami/spark/src/gold/ingest_gold.py",
-        name="gold_transformation",
-        conn_id=SPARK_CONN_ID,
-        application_args=[
-            "--date_from", "{{ params.date_from if params.date_from else ds }}",
-            "--date_to", "{{ params.date_to if params.date_to else ds }}",
-        ],
-        env_vars={"PYTHONPATH": "/opt/bitnami/spark"},
-        conf={
-            "spark.sql.sources.partitionOverwriteMode": "dynamic",
-        },
-        outlets=[GOLD_DATASET],
+        ssh_conn_id=SSH_CONN_ID,
+        command=(
+            f"{SPARK_SUBMIT}"
+            "/opt/bitnami/spark/src/pipeline/gold/ingest_gold.py "
+            '--date_from {{ dag_run.conf.get("date_from", ds) }} '
+            '--date_to {{ dag_run.conf.get("date_to", ds) }}'
+        ),
     )

@@ -1,14 +1,11 @@
-from airflow.datasets import Dataset
 from datetime import datetime, timedelta
 
-# Spark connection và configuration
-SPARK_CONN_ID = "spark_default"
-SPARK_MASTER = "spark://spark-master:7077"
+SSH_CONN_ID = "spark_ssh"
 
-# Datasets cho cross-DAG dependencies (nếu muốn dùng multiple DAGs)
-BRONZE_DATASET = Dataset("s3://warehouse/nessie/taxi/bronze")
-SILVER_DATASET = Dataset("s3://warehouse/nessie/taxi/silver")
-GOLD_DATASET = Dataset("s3://warehouse/nessie/taxi/gold")
+SPARK_SUBMIT = (
+    "spark-submit "
+    "--master spark://spark-master:7077 "
+)
 
 DEFAULT_ARGS = {
     "owner": "lakehouse-team",

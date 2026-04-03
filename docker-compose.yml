@@ -87,15 +87,17 @@ services:
     depends_on:
       - trino
 
-  # 4. Spark Master
+  # 4. Spark Master (có SSH server để Airflow remote submit)
   spark-master:
     <<: *spark-common
+    build: ./docker/spark
     container_name: spark-master
     environment:
       - SPARK_MODE=master
     ports:
       - "8082:8080" # Cổng để xem giao diện quản lý của Master
       - "7077:7077" # Cổng để các worker và Airflow báo cáo cho Master
+    command: bash -c "/usr/sbin/sshd && /opt/bitnami/scripts/spark/run.sh"
 
   # 5. Spark Worker
   spark-worker:
@@ -150,37 +152,29 @@ services:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
-      - AIRFLOW_CONN_SPARK_DEFAULT=spark://spark-master:7077
     ports:
       - "8080:8080" 
     volumes:
       - ./src/airflow/dags:/opt/airflow/dags 
       - ./src/airflow/logs:/opt/airflow/logs
-      - spark-events:/opt/airflow/spark-events
     command: webserver
 
-  # 9. Airflow Scheduler (chạy spark-submit → cần Spark config, jars, source code)
+  # 9. Airflow Scheduler (SSH vào spark-master để chạy spark-submit)
   airflow-scheduler:
     build: ./docker/airflow
     container_name: airflow-scheduler
     depends_on:
       - postgres
       - airflow-init
+      - spark-master
     environment:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
-      - AIRFLOW_CONN_SPARK_DEFAULT=spark://spark-master:7077
-      - PYTHONPATH=/opt/bitnami/spark
+      - AIRFLOW_CONN_SPARK_SSH=ssh://root:spark@spark-master:22
     volumes:
       - ./src/airflow/dags:/opt/airflow/dags
       - ./src/airflow/logs:/opt/airflow/logs
-      - spark-events:/opt/airflow/spark-events
-      - ./src:/opt/bitnami/spark/src
-      - ./data:/opt/bitnami/spark/data
-      - ./conf/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf
-      - ./conf/log4j2.properties:/opt/spark/conf/log4j2.properties
-      - ./jars:/opt/bitnami/spark/custom-jars
     command: scheduler
 
 volumes:
@@ -188,4 +182,4 @@ volumes:
   nessie-data: # Lưu metadata catalog (RocksDB) để bảng không bị mất khi restart
   postgres-data: # Lưu dữ liệu lịch sử của Airflow
   metabase-data: # Lưu cấu hình Metabase (H2 embedded DB)
-  spark-events: # Lưu dữ liệu spark
+  spark-events: # Lưu log lịch sử chạy Spark (Spark History Server)
