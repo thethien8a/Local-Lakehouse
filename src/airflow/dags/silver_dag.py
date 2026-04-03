@@ -2,7 +2,7 @@ from airflow import DAG
 from airflow.models.param import Param
 from airflow.providers.ssh.operators.ssh import SSHOperator
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
-from dags_conf import SSH_CONN_ID, SPARK_SUBMIT, DEFAULT_ARGS
+from dags_conf import SSH_CONN_ID, SPARK_SUBMIT, DEFAULT_ARGS, SSH_CMD_TIMEOUT, SSH_CONN_TIMEOUT
 
 with DAG(
     dag_id="silver_transformation",
@@ -29,9 +29,11 @@ with DAG(
         command=(
             f"{SPARK_SUBMIT}"
             "/opt/bitnami/spark/src/pipeline/silver/ingest_silver.py "
-            '--date_from {{ dag_run.conf.get("date_from", ds) }} '
-            '--date_to {{ dag_run.conf.get("date_to", ds) }}'
+            '--start {{ dag_run.conf.get("date_from", ds) }} '
+            '--end {{ dag_run.conf.get("date_to", ds) }}'
         ),
+        cmd_timeout=SSH_CMD_TIMEOUT,
+        conn_timeout=SSH_CONN_TIMEOUT,
     )
 
     trigger_gold = TriggerDagRunOperator(

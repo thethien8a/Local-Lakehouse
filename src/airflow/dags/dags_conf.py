@@ -2,8 +2,14 @@ from datetime import datetime, timedelta
 
 SSH_CONN_ID = "spark_ssh"
 
+# Spark jobs can run for a long time — disable SSH command timeout
+SSH_CMD_TIMEOUT = None
+SSH_CONN_TIMEOUT = 30
+
 SPARK_SUBMIT = (
-    "spark-submit "
+    "cd /opt/bitnami/spark && "
+    "PYTHONPATH=/opt/bitnami/spark "
+    "/opt/bitnami/spark/bin/spark-submit "
     "--master spark://spark-master:7077 "
 )
 

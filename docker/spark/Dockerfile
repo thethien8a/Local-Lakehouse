@@ -8,6 +8,13 @@ RUN apt-get update \
     && mkdir -p /run/sshd \
     && echo 'root:spark' | chpasswd \
     && sed -i 's/#PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config \
+    && sed -i 's/#PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config \
+    && ssh-keygen -A \
+    && echo "JAVA_HOME=/opt/bitnami/java" >> /etc/environment \
+    && echo "SPARK_HOME=/opt/bitnami/spark" >> /etc/environment \
+    && echo "PYSPARK_PYTHON=/opt/bitnami/python/bin/python3" >> /etc/environment \
+    && echo "PYTHONPATH=/opt/bitnami/spark" >> /etc/environment \
+    && echo "PATH=/opt/bitnami/python/bin:/opt/bitnami/java/bin:/opt/bitnami/spark/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" >> /etc/environment \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
