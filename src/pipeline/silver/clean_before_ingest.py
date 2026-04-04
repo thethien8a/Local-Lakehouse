@@ -88,38 +88,18 @@ def feature_engineering(df: DataFrame) -> DataFrame:
         )
     )
     
-    # Feature Engineering
+    # Feature Engineering — date columns chuyển sang dim_date, chỉ giữ pickup_date làm FK
     df = (
         df.withColumn(
             "is_tip_more_total",
             F.when(F.col("tip_amount") > F.col("total_amount"), True).otherwise(False),
         )
         .withColumn("pickup_date", F.to_date(F.col("tpep_pickup_datetime")))
-        .withColumn("pickup_hour", F.hour(F.col("tpep_pickup_datetime")))
-        .withColumn("pickup_weekday", F.dayofweek(F.col("tpep_pickup_datetime")))
-        .withColumn(
-            "is_weekend",
-            F.when(F.col("pickup_weekday").isin(1, 7), True).otherwise(False),
-        )
-        .withColumn(
-            "time_bucket",
-            F.when(F.col("pickup_hour").between(0, 6), "early_morning")
-            .when(F.col("pickup_hour").between(7, 12), "morning")
-            .when(F.col("pickup_hour").between(13, 18), "afternoon")
-            .otherwise("evening"),
-        )
         .withColumn(
             "trip_duration_min",
             (F.unix_timestamp("tpep_dropoff_datetime") - F.unix_timestamp("tpep_pickup_datetime")) / 60,
         )
         .withColumn("avg_speed_mph", F.col("trip_distance") * 60 / F.col("trip_duration_min"))
-        .withColumn(
-            "is_rush_hour",
-            F.when(
-                (F.col("pickup_hour").between(7, 9)) | (F.col("pickup_hour").between(16, 19)),
-                True,
-            ).otherwise(False),
-        )
         .withColumn("fare_per_mile", F.col("total_amount") / F.col("trip_distance"))
         .withColumn("fare_per_min", F.col("total_amount") / F.col("trip_duration_min"))
     )

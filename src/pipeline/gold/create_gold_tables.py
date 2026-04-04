@@ -24,10 +24,6 @@ def _create_fact_trips(df_silver: DataFrame) -> None:
     df = df_silver.select(
         "trip_id",
         "pickup_date",
-        "pickup_hour",
-        "pickup_weekday",
-        "time_bucket",
-        "is_weekend",
         "pulocation_id",
         "dolocation_id",
         "payment_type",
