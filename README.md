@@ -1,10 +1,10 @@
-# 🏗️ Local Data Lakehouse (Spark + Iceberg + Nessie + Airflow)
+# Local Data Lakehouse 
 
 Dự án triển khai hệ thống **Data Lakehouse** chạy local theo kiến trúc **Medallion**, sử dụng bộ công nghệ hiện đại để xử lý và phân tích tập dữ liệu NYC Taxi.
 
 ---
 
-## 🚀 Kiến trúc Hệ thống
+## Kiến trúc Hệ thống
 - **Storage**: MinIO (S3-compatible) lưu trữ Parquet files.
 - **Table Format**: Apache Iceberg (ACID, Schema Evolution).
 - **Catalog & Versioning**: Project Nessie (Git-for-Data, WAP pattern).
@@ -15,14 +15,14 @@ Dự án triển khai hệ thống **Data Lakehouse** chạy local theo kiến t
 
 ---
 
-## 📂 Cấu trúc Medallion
+## Cấu trúc Medallion
 - **Bronze**: Dữ liệu thô từ Landing Zone (`ingest_bronze.py`).
 - **Silver**: Làm sạch, chuẩn hóa và Feature Engineering với WAP pattern (`ingest_silver.py`).
 - **Gold**: 8 bảng Aggregation phục vụ báo cáo/BI (`ingest_gold.py`).
 
 ---
 
-## 🛠️ Cài đặt nhanh
+## Cài đặt nhanh
 
 ### 1. Chuẩn bị môi trường
 ```bash
@@ -52,7 +52,7 @@ docker compose exec spark-master spark-submit /opt/bitnami/spark/src/pipeline/go
 
 ---
 
-## 📊 Giao diện quản lý
+## Giao diện quản lý
 | Dịch vụ | URL | Credentials |
 | :--- | :--- | :--- |
 | **Airflow** | http://localhost:8080 | `airflow` / `airflow123` |
@@ -65,7 +65,7 @@ docker compose exec spark-master spark-submit /opt/bitnami/spark/src/pipeline/go
 
 ---
 
-## 🌿 Tính năng nổi bật
+## Tính năng nổi bật
 - **WAP (Write-Audit-Publish)**: Sử dụng Nessie branching để kiểm soát chất lượng dữ liệu trước khi merge vào `main`.
 - **Maintenance**: Tự động dọn dẹp snapshot, nén file (`run_maintenance.py`).
 - **Orchestration**: Toàn bộ quy trình được tự động hóa qua Airflow DAGs.
