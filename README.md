@@ -18,7 +18,7 @@ Dự án triển khai hệ thống **Data Lakehouse** chạy local theo kiến t
 ## Cấu trúc Medallion
 - **Bronze**: Dữ liệu thô từ Landing Zone (`ingest_bronze.py`).
 - **Silver**: Làm sạch, chuẩn hóa và Feature Engineering với WAP pattern (`ingest_silver.py`).
-- **Gold**: 8 bảng Aggregation phục vụ báo cáo/BI (`ingest_gold.py`).
+- **Gold**: 3 bảng dim và 1 bảng fact phục vụ phân tích, kết hợp thêm 1 bảng agg để tối ưu hiệu năng truy vấn theo ngày.
 
 ---
 

@@ -4,9 +4,8 @@ USER root
 
 # SSH server để Airflow có thể remote submit spark jobs
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends openssh-server \
+    && apt-get install -y --no-install-recommends openssh-server gettext-base \
     && mkdir -p /run/sshd \
-    && echo 'root:spark' | chpasswd \
     && sed -i 's/#PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config \
     && sed -i 's/#PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config \
     && ssh-keygen -A \

@@ -6,3 +6,4 @@ jars/
 data/landing
 data/nyc_taxi_data.parquet
 AGENTS.md
+.env

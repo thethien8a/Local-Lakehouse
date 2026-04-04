@@ -7,7 +7,7 @@ from dags_conf import SSH_CONN_ID, SPARK_SUBMIT, DEFAULT_ARGS, SSH_CMD_TIMEOUT, 
 with DAG(
     dag_id="bronze_ingestion",
     default_args=DEFAULT_ARGS,
-    schedule="0 1 * * *",
+    schedule=None,
     catchup=False,
     tags=["lakehouse", "bronze"],
     params={
