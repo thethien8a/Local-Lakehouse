@@ -231,35 +231,3 @@
 | **Top 10 pickup locations** | COUNT(*) GROUP BY pulocation_id | fact_trips + dim_zone |
 | **Scatter plot (Distance vs Fare)** | trip_distance, fare_amount | fact_trips |
 | **Payment type share** | COUNT(*) GROUP BY payment_type | fact_trips + dim_payment |
-
----
-
-## 🎯 Design Decisions
-
-### 1. Tại sao có `trip_id`?
-- **Idempotent pipeline:** MD5 hash đảm bảo cùng một chuyến đi luôn có cùng ID
-- **Deduplication:** Dễ dàng phát hiện và loại bỏ duplicate
-- **Upsert:** Dùng làm key cho MERGE operations
-
-### 2. Tại sao có `agg_daily_summary`?
-- **Performance:** Giảm số lượng rows cần scan khi load dashboard
-- **Pre-aggregation:** Tính toán sẵn các KPI phổ biến
-- **Faster queries:** Dashboard queries chỉ cần đọc 1 row/ngày thay vì N rows
-
-### 3. Tại sao dim_time là implicit?
-- **Simplicity:** Thông tin thời gian đơn giản, không cần bảng riêng
-- **Performance:** Tránh JOIN khi query theo thời gian
-- **Flexibility:** Dễ dàng thêm các derived columns (is_weekend, time_bucket)
-
-### 4. Tại sao partition theo `pickup_date`?
-- **Time-based queries:** Dashboard chủ yếu query theo ngày
-- **Pruning:** Spark có thể skip các partitions không cần thiết
-- **Incremental loads:** Dễ dàng append/overwrite theo ngày
-
----
-
-## 📚 Tài liệu tham khảo
-
-- [Kimball's Dimensional Modeling](https://www.kimballgroup.com/)
-- [Apache Iceberg Table Design](https://iceberg.apache.org/docs/latest/)
-- [NYC TLC Data Dictionary](./nyc_taxi_data_dictionary.md)
