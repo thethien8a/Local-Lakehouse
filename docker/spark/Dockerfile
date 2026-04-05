@@ -2,6 +2,8 @@ FROM bitnamilegacy/spark:3.5.1
 
 USER root
 
+RUN id -u spark >/dev/null 2>&1 || useradd -m -u 1001 -g root spark
+
 # SSH server để Airflow có thể remote submit spark jobs
 RUN apt-get update \
     && apt-get install -y --no-install-recommends openssh-server gettext-base \
