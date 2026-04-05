@@ -22,3 +22,12 @@ DEFAULT_ARGS = {
     "retries": 2,
     "retry_delay": timedelta(minutes=5),
 }
+
+MAINTENANCE_TABLES = [
+    "nessie.taxi.bronze",
+    "nessie.taxi.silver",
+    "nessie.taxi.fact_trips",
+    "nessie.taxi.agg_daily_summary",
+]
+
+MAINTENANCE_SCRIPT = "/opt/bitnami/spark/src/maintenance/run_maintenance.py"
