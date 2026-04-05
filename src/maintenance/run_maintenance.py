@@ -38,45 +38,45 @@ def run_full_maintenance(tables, days_to_keep=30, retain_last=10, skip_compactio
     spark = create_spark_session()
     spark.sparkContext.setLogLevel("WARN")
     
-    logger.info(f"[MAINTENANCE] Bắt đầu quy trình bảo trì cho {len(tables)} bảng")
+    logger.info(f"Bắt đầu quy trình bảo trì cho {len(tables)} bảng")
     
     # 1. Compaction
     if not skip_compaction:
-        logger.info("[MAINTENANCE] BẮT ĐẦU COMPACT TABLES")
+        logger.info("BẮT ĐẦU COMPACT TABLES")
         for table_name in tables:
             try:
                 compact_table(spark, table_name)
             except Exception as e:
-                logger.error(f"[MAINTENANCE] Bỏ qua compaction bảng {table_name} do lỗi: {str(e)}")
+                logger.error(f"Bỏ qua compaction bảng {table_name} do lỗi: {str(e)}")
                 continue
     else:
-        logger.info("[MAINTENANCE] BỎ QUA COMPACT TABLES theo yêu cầu")
+        logger.info("BỎ QUA COMPACT TABLES theo yêu cầu")
     
     # 2. Expire snapshots
     if not skip_expire:
-        logger.info("[MAINTENANCE] BẮT ĐẦU EXPIRE SNAPSHOTS")
+        logger.info("BẮT ĐẦU EXPIRE SNAPSHOTS")
         for table_name in tables:
             try:
                 expire_snapshots_for_table(spark, table_name, days_to_keep, retain_last)
             except Exception as e:
-                logger.error(f"[MAINTENANCE] Bỏ qua expire snapshots bảng {table_name} do lỗi: {str(e)}")
+                logger.error(f"Bỏ qua expire snapshots bảng {table_name} do lỗi: {str(e)}")
                 continue
     else:
-        logger.info("[MAINTENANCE] BỎ QUA EXPIRE SNAPSHOTS theo yêu cầu")
+        logger.info("BỎ QUA EXPIRE SNAPSHOTS theo yêu cầu")
     
     # 3. Remove orphan files (chỉ chạy sau khi expire snapshots)
     if not skip_remove_orphan:
-        logger.info("[MAINTENANCE] BẮT ĐẦU REMOVE ORPHAN FILES")
+        logger.info("BẮT ĐẦU REMOVE ORPHAN FILES")
         for table_name in tables:
             try:
                 remove_orphan_files_for_table(spark, table_name)
             except Exception as e:
-                logger.error(f"[MAINTENANCE] Bỏ qua remove orphan files bảng {table_name} do lỗi: {str(e)}")
+                logger.error(f"Bỏ qua remove orphan files bảng {table_name} do lỗi: {str(e)}")
                 continue
     else:
-        logger.info("[MAINTENANCE] BỎ QUA REMOVE ORPHAN FILES theo yêu cầu")
+        logger.info("BỎ QUA REMOVE ORPHAN FILES theo yêu cầu")
     
-    logger.info("[MAINTENANCE] HOÀN TẤT QUY TRÌNH BẢO TRÌ")
+    logger.info("HOÀN TẤT QUY TRÌNH BẢO TRÌ")
     
     # Dừng Spark session
     spark.stop()

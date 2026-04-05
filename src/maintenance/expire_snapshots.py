@@ -31,7 +31,7 @@ def expire_snapshots_for_table(spark, table_name, days_to_keep=30, retain_last=1
         days_to_keep: Số ngày snapshot cần giữ lại (mặc định: 30)
         retain_last: Số lượng snapshot gần nhất luôn giữ lại (mặc định: 10)
     """
-    logger.info(f"[EXPIRE] Bắt đầu expire snapshots cho bảng: {table_name}")
+    logger.info(f"Bắt đầu expire snapshots cho bảng: {table_name}")
     logger.info(f"   - Giữ lại snapshot cũ hơn {days_to_keep} ngày")
     logger.info(f"   - Luôn giữ lại {retain_last} snapshot gần nhất")
     
@@ -53,14 +53,19 @@ def expire_snapshots_for_table(spark, table_name, days_to_keep=30, retain_last=1
         # Lấy kết quả
         rows = result.collect()
         if rows:
-            logger.info(f"[EXPIRE] Expire snapshots hoàn tất cho bảng {table_name}")
+            logger.info(f"Expire snapshots hoàn tất cho bảng {table_name}")
             for row in rows:
-                logger.info(f"   - Snapshots expired: {row.snapshots_expired}")
+                logger.info(f"   - Deleted data files: {row.deleted_data_files_count}")
+                logger.info(f"   - Deleted position delete files: {row.deleted_position_delete_files_count}")
+                logger.info(f"   - Deleted equality delete files: {row.deleted_equality_delete_files_count}")
+                logger.info(f"   - Deleted manifest files: {row.deleted_manifest_files_count}")
+                logger.info(f"   - Deleted manifest lists: {row.deleted_manifest_lists_count}")
+                logger.info(f"   - Deleted statistics files: {row.deleted_statistics_files_count}")
         else:
-            logger.info(f"[EXPIRE] Không có snapshot nào bị expire cho bảng {table_name}")
+            logger.info(f"Không có snapshot nào bị expire cho bảng {table_name}")
             
     except Exception as e:
-        logger.error(f"[EXPIRE] Lỗi khi expire snapshots bảng {table_name}: {str(e)}")
+        logger.error(f"Lỗi khi expire snapshots bảng {table_name}: {str(e)}")
         raise
 
 def main():
@@ -77,7 +82,7 @@ def main():
     spark = create_spark_session()
     spark.sparkContext.setLogLevel("WARN")
     
-    logger.info(f"[EXPIRE] Bắt đầu expire snapshots cho {len(args.tables)} bảng")
+    logger.info(f"Bắt đầu expire snapshots cho {len(args.tables)} bảng")
     logger.info(f"   - Giữ lại snapshot cũ hơn {args.days_to_keep} ngày")
     logger.info(f"   - Luôn giữ lại {args.retain_last} snapshot gần nhất")
     
@@ -86,10 +91,10 @@ def main():
         try:
             expire_snapshots_for_table(spark, table_name, args.days_to_keep, args.retain_last)
         except Exception as e:
-            logger.error(f"[EXPIRE] Bỏ qua bảng {table_name} do lỗi: {str(e)}")
+            logger.error(f"Bỏ qua bảng {table_name} do lỗi: {str(e)}")
             continue
     
-    logger.info("[EXPIRE] Hoàn tất quá trình expire snapshots")
+    logger.info("Hoàn tất quá trình expire snapshots")
     
     # Dừng Spark session
     spark.stop()

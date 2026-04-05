@@ -30,7 +30,7 @@ def compact_table(spark, table_name):
         spark: Spark session
         table_name: Tên bảng cần compaction (vd: 'nessie.taxi.silver')
     """
-    logger.info(f"[COMPACT] Bắt đầu compaction cho bảng: {table_name}")
+    logger.info(f"Bắt đầu compaction cho bảng: {table_name}")
     
     try:
         # Gọi stored procedure để compaction
@@ -39,39 +39,40 @@ def compact_table(spark, table_name):
         # Lấy kết quả
         rows = result.collect()
         if rows:
-            logger.info(f"[COMPACT] Compaction hoàn tất cho bảng {table_name}")
+            logger.info(f"Compaction hoàn tất cho bảng {table_name}")
             for row in rows:
-                logger.info(f"   - Files rewritten: {row.files_rewritten}")
+                logger.info(f"   - Files rewritten: {row.rewritten_data_files_count}")
                 logger.info(f"   - Files added: {row.added_data_files_count}")
-                logger.info(f"   - Files removed: {row.deleted_data_files_count}")
+                logger.info(f"   - Bytes rewritten: {row.rewritten_bytes_count}")
+                logger.info(f"   - Files failed: {row.failed_data_files_count}")
         else:
-            logger.info(f"[COMPACT] Không có file nào cần compaction cho bảng {table_name}")
+            logger.info(f"Không có file nào cần compaction cho bảng {table_name}")
             
     except Exception as e:
-        logger.error(f"[COMPACT] Lỗi khi compaction bảng {table_name}: {str(e)}")
+        logger.error(f"Lỗi khi compaction bảng {table_name}: {str(e)}")
         raise
 
 def main():
     parser = argparse.ArgumentParser(description="Compaction script cho Lakehouse")
     parser.add_argument("--tables", nargs="+", required=True, 
-                        help="Danh sách các bảng cần compaction (vd: nessie.taxi.silver nessie.taxi.gold_revenue_by_hour)")
+                        help="Danh sách các bảng cần compaction (vd: nessie.taxi.silver nessie.taxi.fact_trips)")
     args = parser.parse_args()
     
     # Tạo Spark session
     spark = create_spark_session()
     spark.sparkContext.setLogLevel("WARN")
     
-    logger.info(f"[COMPACT] Bắt đầu compaction cho {len(args.tables)} bảng")
+    logger.info(f"Bắt đầu compaction cho {len(args.tables)} bảng")
     
     # Thực hiện compaction cho từng bảng
     for table_name in args.tables:
         try:
             compact_table(spark, table_name)
         except Exception as e:
-            logger.error(f"[COMPACT] Bỏ qua bảng {table_name} do lỗi: {str(e)}")
+            logger.error(f"Bỏ qua bảng {table_name} do lỗi: {str(e)}")
             continue
     
-    logger.info("[COMPACT] Hoàn tất quá trình compaction")
+    logger.info("Hoàn tất quá trình compaction")
     
     # Dừng Spark session
     spark.stop()

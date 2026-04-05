@@ -29,23 +29,24 @@ def remove_orphan_files_for_table(spark, table_name):
         spark: Spark session
         table_name: Tên bảng cần remove orphan files (vd: 'nessie.taxi.silver')
     """
-    logger.info(f"[ORPHAN] Bắt đầu remove orphan files cho bảng: {table_name}")
+    logger.info(f"Bắt đầu remove orphan files cho bảng: {table_name}")
     
     try:
         # Gọi stored procedure để remove orphan files
         result = spark.sql(f"CALL nessie.system.remove_orphan_files('{table_name}')")
         
-        # Lấy kết quả
+        # Lấy kết quả — procedure trả về từng dòng với path file orphan
         rows = result.collect()
         if rows:
-            logger.info(f"[ORPHAN] Remove orphan files hoàn tất cho bảng {table_name}")
+            logger.info(f"Remove orphan files hoàn tất cho bảng {table_name}")
+            logger.info(f"   - Tổng số file orphan đã xóa: {len(rows)}")
             for row in rows:
-                logger.info(f"   - Files removed: {row.removed_files_count}")
+                logger.info(f"   - Đã xóa: {row.orphan_file_location}")
         else:
-            logger.info(f"[ORPHAN] Không có file mồ côi nào được tìm thấy cho bảng {table_name}")
+            logger.info(f"Không có file mồ côi nào được tìm thấy cho bảng {table_name}")
             
     except Exception as e:
-        logger.error(f"[ORPHAN] Lỗi khi remove orphan files bảng {table_name}: {str(e)}")
+        logger.error(f"Lỗi khi remove orphan files bảng {table_name}: {str(e)}")
         raise
 
 def main():
@@ -58,17 +59,17 @@ def main():
     spark = create_spark_session()
     spark.sparkContext.setLogLevel("WARN")
     
-    logger.info(f"[ORPHAN] Bắt đầu remove orphan files cho {len(args.tables)} bảng")
+    logger.info(f"Bắt đầu remove orphan files cho {len(args.tables)} bảng")
     
     # Thực hiện remove orphan files cho từng bảng
     for table_name in args.tables:
         try:
             remove_orphan_files_for_table(spark, table_name)
         except Exception as e:
-            logger.error(f"[ORPHAN] Bỏ qua bảng {table_name} do lỗi: {str(e)}")
+            logger.error(f"Bỏ qua bảng {table_name} do lỗi: {str(e)}")
             continue
     
-    logger.info("[ORPHAN] Hoàn tất quá trình remove orphan files")
+    logger.info("Hoàn tất quá trình remove orphan files")
     
     # Dừng Spark session
     spark.stop()
