@@ -14,7 +14,6 @@ def create_gold_tables(spark: SparkSession, df_silver: DataFrame) -> None:
         _create_agg_daily_summary(df_silver)
     except Exception as e:
         logger.error(f"Có bảng gold bị lỗi: {e}")
-        spark.stop()
         raise
 
 

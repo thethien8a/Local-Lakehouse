@@ -20,7 +20,6 @@ def create_dim_tables(spark: SparkSession) -> None:
             write_dim_table(df_zone, "nessie.taxi.dim_zone")
         except Exception as e:
             logger.error(f"Không thể tạo dim_zone. Lỗi: {e}")
-            spark.stop()
             raise
 
     # dim_payment: lookup tên phương thức thanh toán cho donut chart
@@ -89,5 +88,4 @@ def create_dim_tables(spark: SparkSession) -> None:
             write_dim_table(df_date, "nessie.taxi.dim_date")
         except Exception as e:
             logger.error(f"Không thể tạo dim_date. Lỗi: {e}")
-            spark.stop()
             raise

@@ -46,10 +46,12 @@ def main() -> None:
 
         # Loc du lieu Silver theo date range
         logger.info("Đang đọc dữ liệu Silver...")
-        df_silver = get_silver_data_by_date_range(spark, start_str, end_str, BRANCH_NAME)
+        df_silver = get_silver_data_by_date_range(spark, start_str, end_str)
         
         if df_silver is None:
-            logger.warning("Không có dữ liệu Silver. Dừng lại.")
+            logger.warning("Không có dữ liệu Silver. Cleanup branch rồi dừng.")
+            spark.sql("USE REFERENCE main IN nessie")
+            spark.sql(f"DROP BRANCH IF EXISTS `{BRANCH_NAME}` IN nessie")
             return
 
         row_count = df_silver.count()

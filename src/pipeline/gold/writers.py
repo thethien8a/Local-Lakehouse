@@ -11,7 +11,7 @@ def write_gold_table(df, table_name, partition_col="pickup_date"):
         df.writeTo(table_name).overwritePartitions()
     else:
         logger.info(f"  -> Tạo mới bảng {table_name}...")
-        df.writeTo(table_name).partitionedBy(partition_col).create()
+        df.writeTo(table_name).tableProperty("gc.enabled", "true").partitionedBy(partition_col).create()
 
 
 def write_dim_table(df, table_name):
