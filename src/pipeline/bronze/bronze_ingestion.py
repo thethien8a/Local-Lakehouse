@@ -53,6 +53,7 @@ def ingest_bronze_dates(spark: SparkSession, table_name: str, target_dates: List
             (
                 df_raw.writeTo(table_name)
                 .tableProperty("write.format.default", "parquet")
+                .tableProperty("gc.enabled", "true")
                 .partitionedBy("ingestion_date")
                 .create()
             )

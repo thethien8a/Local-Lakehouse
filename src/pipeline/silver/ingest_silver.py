@@ -92,6 +92,7 @@ def main():
         else:
             df_cleaned.writeTo(silver_table) \
                 .tableProperty("write.format.default", "parquet") \
+                .tableProperty("gc.enabled", "true") \
                 .partitionedBy("ingestion_date") \
                 .create()
 
