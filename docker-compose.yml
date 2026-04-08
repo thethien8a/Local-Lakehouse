@@ -30,17 +30,21 @@ services:
     volumes:
       - minio-data:/data
 
-  # 1b. Tự tạo bucket "warehouse" khi MinIO sẵn sàng
+  # 1b. Tự tạo bucket "warehouse" + generate Prometheus bearer token
   minio-init:
     image: minio/mc:latest
     container_name: minio-init
     depends_on:
       - minio
+    volumes:
+      - minio-prometheus-token:/token
     entrypoint: >
       /bin/sh -c "
       until mc alias set local http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD}; do sleep 1; done;
       mc mb --ignore-existing local/warehouse;
       echo 'Bucket warehouse created';
+      mc admin prometheus generate local cluster | while IFS=: read key val; do case $$key in *bearer_token) echo $$val | tr -d ' ' > /token/minio-token; break;; esac; done;
+      echo 'Prometheus bearer token generated';
       "
 
   # 2. Project Nessie
@@ -228,6 +232,7 @@ services:
       - ./conf/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./conf/prometheus/alerts:/etc/prometheus/alerts:ro
       - prometheus-data:/prometheus
+      - minio-prometheus-token:/etc/prometheus/minio-token:ro
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -237,6 +242,7 @@ services:
       - '--query.timeout=3m'
     restart: unless-stopped
     depends_on:
+      - minio-init
       - postgres-exporter
       - statsd-exporter
 
@@ -267,6 +273,23 @@ services:
       - '--web.listen-address=:9102'
     restart: unless-stopped
 
+  # 13. Grafana - Visualization Dashboard cho Prometheus metrics
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: grafana
+    ports:
+      - "3001:3000"  # Port 3001 vì Metabase đã dùng 3000
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-password}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./conf/grafana/provisioning:/etc/grafana/provisioning:ro
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
 volumes:
   minio-data:
   nessie-data: # Lưu metadata catalog (RocksDB) để bảng không bị mất khi restart
@@ -274,4 +297,6 @@ volumes:
   metabase-data: # Lưu cấu hình Metabase (H2 embedded DB)
   spark-events: # Lưu log lịch sử chạy Spark (Spark History Server)
   prometheus-data: # Lưu time series data của Prometheus
+  minio-prometheus-token: # Chứa bearer token để Prometheus scrape MinIO metrics
+  grafana-data: # Lưu dashboards, users, settings của Grafana
 
