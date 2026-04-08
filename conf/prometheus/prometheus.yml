@@ -1,0 +1,68 @@
+# Prometheus configuration cho Lakehouse Stack
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'lakehouse'
+    env: 'development'
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []  # Thêm AlertManager sau nếu cần
+
+rule_files:
+  - /etc/prometheus/alerts/*.yml
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Spark Master (JMX Exporter)
+  - job_name: 'spark-master'
+    static_configs:
+      - targets: ['spark-master:9091']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'spark-master'
+
+  # Spark Worker (JMX Exporter)
+  - job_name: 'spark-worker'
+    static_configs:
+      - targets: ['spark-worker:9091']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'spark-worker'
+
+  # Airflow (via StatsD Exporter)
+  - job_name: 'airflow'
+    static_configs:
+      - targets: ['statsd-exporter:9102']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'airflow'
+
+  # MinIO (Native Prometheus endpoint)
+  - job_name: 'minio'
+    metrics_path: /minio/v2/metrics/cluster
+    scheme: http
+    static_configs:
+      - targets: ['minio:9000']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'minio'
+
+  # PostgreSQL (postgres_exporter)
+  - job_name: 'postgresql'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'postgres-airflow'

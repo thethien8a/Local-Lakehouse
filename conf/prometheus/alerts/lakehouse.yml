@@ -1,0 +1,95 @@
+# Alert rules cho Lakehouse Stack
+groups:
+  - name: lakehouse-critical
+    rules:
+      # Spark Master down
+      - alert: SparkMasterDown
+        expr: up{job="spark-master"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Spark Master is down"
+          description: "Spark Master has been down for more than 1 minute."
+
+      # Spark Worker down
+      - alert: SparkWorkerDown
+        expr: up{job="spark-worker"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Spark Worker is down"
+          description: "Spark Worker has been down for more than 2 minutes."
+
+      # Airflow Scheduler down (không có heartbeat)
+      - alert: AirflowSchedulerDown
+        expr: up{job="airflow"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Airflow Scheduler metrics unavailable"
+          description: "Cannot scrape Airflow metrics for more than 2 minutes."
+
+      # MinIO down
+      - alert: MinIODown
+        expr: up{job="minio"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MinIO is down"
+          description: "MinIO storage service is unreachable."
+
+      # Trino down
+      - alert: TrinoDown
+        expr: up{job="trino"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Trino is down"
+          description: "Trino query engine has been down for more than 2 minutes."
+
+      # PostgreSQL down
+      - alert: PostgreSQLDown
+        expr: up{job="postgresql"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL database is unreachable."
+
+  - name: lakehouse-warning
+    rules:
+      # PostgreSQL high connections
+      - alert: PostgreSQLHighConnections
+        expr: pg_stat_activity_count > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL connection count is high"
+          description: "PostgreSQL has {{ $value }} active connections."
+
+      # JVM Heap memory high (Spark/Trino)
+      - alert: JVMHeapMemoryHigh
+        expr: jvm_memory_heap_used / jvm_memory_heap_max > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "JVM Heap memory usage is high"
+          description: "JVM Heap memory usage is above 85% for {{ $labels.instance }}."
+
+      # Long GC pause
+      - alert: LongGCPause
+        expr: increase(jvm_gc_collection_seconds_sum[5m]) > 30
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Long GC pause detected"
+          description: "GC collection time exceeded 30 seconds in the last 5 minutes for {{ $labels.instance }}."
