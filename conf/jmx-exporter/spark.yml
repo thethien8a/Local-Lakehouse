@@ -1,4 +1,6 @@
 # JMX Exporter config cho Apache Spark
+# JVM metrics (memory, GC, threads) được tự động collect bởi jmx_exporter >= 1.0.0
+# Chỉ cần define rules cho Spark-specific metrics
 ---
 startDelaySeconds: 5
 ssl: false
@@ -6,44 +8,6 @@ lowercaseOutputName: true
 lowercaseOutputLabelNames: true
 
 rules:
-  # JVM Memory metrics
-  - pattern: 'java.lang<type=Memory><HeapMemoryUsage>(\w+)'
-    name: jvm_memory_heap_$1
-    type: GAUGE
-    help: "JVM Heap Memory $1"
-    
-  - pattern: 'java.lang<type=Memory><NonHeapMemoryUsage>(\w+)'
-    name: jvm_memory_nonheap_$1
-    type: GAUGE
-    help: "JVM Non-Heap Memory $1"
-
-  # Garbage Collection
-  - pattern: 'java.lang<type=GarbageCollector, name=(.*)><>CollectionCount'
-    name: jvm_gc_collection_count
-    labels:
-      gc: $1
-    type: COUNTER
-    help: "JVM GC Collection Count"
-
-  - pattern: 'java.lang<type=GarbageCollector, name=(.*)><>CollectionTime'
-    name: jvm_gc_collection_seconds_sum
-    labels:
-      gc: $1
-    type: COUNTER
-    help: "JVM GC Collection Time in milliseconds"
-    valueFactor: 0.001
-
-  # Threading
-  - pattern: 'java.lang<type=Threading><>ThreadCount'
-    name: jvm_threads_current
-    type: GAUGE
-    help: "Current thread count"
-
-  - pattern: 'java.lang<type=Threading><>DaemonThreadCount'
-    name: jvm_threads_daemon
-    type: GAUGE
-    help: "Daemon thread count"
-
   # Spark DAGScheduler
   - pattern: 'metrics<name=(.*)\.driver\.DAGScheduler\.(.*)><>Value'
     name: spark_dag_scheduler_$2
