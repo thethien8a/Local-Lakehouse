@@ -1,0 +1,58 @@
+# JMX Exporter config cho Apache Spark
+# JVM metrics (memory, GC, threads) được tự động collect bởi jmx_exporter >= 1.0.0
+# Chỉ cần define rules cho Spark-specific metrics
+---
+startDelaySeconds: 5
+ssl: false
+lowercaseOutputName: true
+lowercaseOutputLabelNames: true
+
+rules:
+  # Spark DAGScheduler
+  - pattern: 'metrics<name=(.*)\.driver\.DAGScheduler\.(.*)><>Value'
+    name: spark_dag_scheduler_$2
+    labels:
+      app: $1
+    type: GAUGE
+    help: "Spark DAGScheduler $2"
+
+  # Spark Executor metrics
+  - pattern: 'metrics<name=(.*)\.driver\.executor\.(.*)><>Value'
+    name: spark_executor_$2
+    labels:
+      app: $1
+    type: GAUGE
+    help: "Spark Executor $2"
+
+  # Spark BlockManager
+  - pattern: 'metrics<name=(.*)\.driver\.BlockManager\.(.*)><>Value'
+    name: spark_block_manager_$2
+    labels:
+      app: $1
+    type: GAUGE
+    help: "Spark BlockManager $2"
+
+  # Spark Master metrics
+  - pattern: 'metrics<name=master\.(.*)><>Value'
+    name: spark_master_$1
+    type: GAUGE
+    help: "Spark Master $1"
+
+  # Spark Worker metrics
+  - pattern: 'metrics<name=worker\.(.*)><>Value'
+    name: spark_worker_$1
+    type: GAUGE
+    help: "Spark Worker $1"
+
+  # Spark Shuffle metrics
+  - pattern: 'metrics<name=(.*)\.driver\.shuffleService\.(.*)><>Value'
+    name: spark_shuffle_$2
+    labels:
+      app: $1
+    type: GAUGE
+    help: "Spark Shuffle Service $2"
+
+  # Catch-all for remaining Spark metrics
+  - pattern: 'metrics<name=(.*)><>Value'
+    name: spark_$1
+    type: GAUGE

@@ -10,7 +10,7 @@ Dự án triển khai hệ thống **Data Lakehouse** chạy local theo kiến t
 - **Catalog & Versioning**: Project Nessie (Git-for-Data, WAP pattern).
 - **Compute**: Apache Spark 3.5.1 (PySpark).
 - **Orchestration**: Apache Airflow 2.10.3.
-- **Monitoring**: Prometheus & Grafana (Planned) - Giám sát tài nguyên và hiệu suất pipeline.
+- **Monitoring**: Prometheus (Planned) - Giám sát tài nguyên và hiệu suất pipeline.
 - **Query & BI**: Trino (SQL Engine) & Metabase (Dashboard).
 
 ---
@@ -60,7 +60,6 @@ docker compose exec spark-master spark-submit /opt/bitnami/spark/src/pipeline/go
 | **Spark Master** | http://localhost:8082 | - |
 | **Metabase** | http://localhost:3000 | (Setup khi chạy lần đầu) |
 | **Nessie API** | http://localhost:19120 | - |
-| **Grafana** | http://localhost:3001 | (Coming Soon - Chưa cấu hình) |
 | **Prometheus** | http://localhost:9090 | (Coming Soon - Chưa cấu hình) |
 
 ---

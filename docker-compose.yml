@@ -9,9 +9,12 @@ x-spark-common: &spark-common
     - spark-events:/opt/bitnami/spark/events 
     - ./data:/opt/bitnami/spark/data
     - ./src:/opt/bitnami/spark/src
+    # JMX Exporter config cho Prometheus monitoring
+    - ./conf/jmx-exporter/spark.yml:/opt/bitnami/spark/jmx-exporter.yml:ro
   environment:
     - MINIO_ROOT_USER=${MINIO_ROOT_USER}
     - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    
 services:
   # 1. MinIO
   minio:
@@ -27,17 +30,21 @@ services:
     volumes:
       - minio-data:/data
 
-  # 1b. Tự tạo bucket "warehouse" khi MinIO sẵn sàng
+  # 1b. Tự tạo bucket "warehouse" + generate Prometheus bearer token
   minio-init:
     image: minio/mc:latest
     container_name: minio-init
     depends_on:
       - minio
+    volumes:
+      - minio-prometheus-token:/token
     entrypoint: >
       /bin/sh -c "
       until mc alias set local http://minio:9000 ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD}; do sleep 1; done;
       mc mb --ignore-existing local/warehouse;
       echo 'Bucket warehouse created';
+      mc admin prometheus generate local cluster | while IFS=: read key val; do case $$key in *bearer_token) echo $$val | tr -d ' ' > /token/minio-token; break;; esac; done;
+      echo 'Prometheus bearer token generated';
       "
 
   # 2. Project Nessie
@@ -107,9 +114,12 @@ services:
       - MINIO_ROOT_USER=${MINIO_ROOT_USER}
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
       - SPARK_SSH_PASSWORD=${SPARK_SSH_PASSWORD}
+      # JMX Exporter agent cho Prometheus monitoring
+      - SPARK_MASTER_OPTS=-javaagent:/opt/bitnami/spark/custom-jars/jmx_prometheus_javaagent-1.0.1.jar=9091:/opt/bitnami/spark/jmx-exporter.yml
     ports:
       - "8082:8080" # Cổng để xem giao diện quản lý của Master
       - "7077:7077" # Cổng để các worker và Airflow báo cáo cho Master
+      - "9091:9091" # Prometheus JMX metrics
     command: >
       bash -c "
       echo \"root:$$SPARK_SSH_PASSWORD\" | chpasswd &&
@@ -129,8 +139,11 @@ services:
       - SPARK_WORKER_CORES=2   # Cấp cho worker 2 nhân CPU
       - MINIO_ROOT_USER=${MINIO_ROOT_USER}
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      # JMX Exporter agent cho Prometheus monitoring
+      - SPARK_WORKER_OPTS=-javaagent:/opt/bitnami/spark/custom-jars/jmx_prometheus_javaagent-1.0.1.jar=9091:/opt/bitnami/spark/jmx-exporter.yml
     ports:
       - "8081:8081" # Giao diện của worker
+      - "9093:9091" # Prometheus JMX metrics (port khác để tránh conflict)
     command: >
       bash -c "
       envsubst < /opt/bitnami/spark/conf/spark-defaults.conf.tpl > /opt/bitnami/spark/conf/spark-defaults.conf &&
@@ -193,15 +206,72 @@ services:
       - postgres
       - airflow-init
       - spark-master
+      - statsd-exporter
     environment:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/airflow
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
       - AIRFLOW_CONN_SPARK_SSH=ssh://root:${SPARK_SSH_PASSWORD}@spark-master:22
+      # StatsD metrics cho Prometheus monitoring
+      - AIRFLOW__METRICS__STATSD_ON=True
+      - AIRFLOW__METRICS__STATSD_HOST=statsd-exporter
+      - AIRFLOW__METRICS__STATSD_PORT=9125
+      - AIRFLOW__METRICS__STATSD_PREFIX=airflow
     volumes:
       - ./src/airflow/dags:/opt/airflow/dags
       - ./src/airflow/logs:/opt/airflow/logs
     command: scheduler
+
+  # 10. Prometheus - Time series database cho metrics
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./conf/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./conf/prometheus/alerts:/etc/prometheus/alerts:ro
+      - prometheus-data:/prometheus
+      - minio-prometheus-token:/etc/prometheus/minio-token:ro
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-lifecycle'
+      - '--storage.tsdb.retention.size=10GB'
+      - '--query.timeout=3m'
+    restart: unless-stopped
+    depends_on:
+      - minio-init
+      - postgres-exporter
+      - statsd-exporter
+
+  # 11. PostgreSQL Exporter - Export PostgreSQL metrics cho Prometheus
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: postgres-exporter
+    ports:
+      - "9187:9187"
+    environment:
+      - DATA_SOURCE_NAME=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/airflow?sslmode=disable
+    restart: unless-stopped
+    depends_on:
+      - postgres
+
+  # 12. StatsD Exporter - Chuyển đổi Airflow StatsD metrics sang Prometheus format
+  statsd-exporter:
+    image: prom/statsd-exporter:v0.28.0
+    container_name: statsd-exporter
+    ports:
+      - "9102:9102"    # Prometheus metrics endpoint
+      - "9125:9125/udp" # StatsD input từ Airflow
+    volumes:
+      - ./conf/statsd/mapping.yml:/tmp/mapping.yml:ro
+    command:
+      - '--statsd.mapping-config=/tmp/mapping.yml'
+      - '--statsd.listen-udp=:9125'
+      - '--web.listen-address=:9102'
+    restart: unless-stopped
 
 volumes:
   minio-data:
@@ -209,3 +279,6 @@ volumes:
   postgres-data: # Lưu dữ liệu lịch sử của Airflow
   metabase-data: # Lưu cấu hình Metabase (H2 embedded DB)
   spark-events: # Lưu log lịch sử chạy Spark (Spark History Server)
+  prometheus-data: # Lưu time series data của Prometheus
+  minio-prometheus-token: # Chứa bearer token để Prometheus scrape MinIO metrics
+
