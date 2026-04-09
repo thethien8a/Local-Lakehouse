@@ -5,6 +5,7 @@ x-spark-common: &spark-common
   volumes:
     - ./conf/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf.tpl:ro
     - ./conf/log4j2.properties:/opt/bitnami/spark/conf/log4j2.properties
+    - ./conf/metrics.properties:/opt/bitnami/spark/conf/metrics.properties:ro
     - ./jars:/opt/bitnami/spark/custom-jars
     - spark-events:/opt/bitnami/spark/events 
     - ./data:/opt/bitnami/spark/data
@@ -174,7 +175,7 @@ services:
     environment:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/airflow
-      - _AIRFLOW_DB_UPGRADE=true
+      - _AIRFLOW_DB_MIGRATE=true
       - _AIRFLOW_WWW_USER_CREATE=true
       - _AIRFLOW_WWW_USER_USERNAME=${AIRFLOW_WWW_USER}
       - _AIRFLOW_WWW_USER_PASSWORD=${AIRFLOW_WWW_PASSWORD}
