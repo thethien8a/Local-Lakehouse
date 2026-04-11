@@ -38,8 +38,8 @@
 | # | Panel | Type | Query | Mô tả |
 |---|-------|------|-------|-------|
 | 13 | Airflow Task Throughput | Time series | `rate(airflow_ti_successes_total[5m])` + `rate(airflow_ti_failures_total[5m])` | 2 series: success (green) và failed (red) |
-| 14 | Spark JVM Heap (All nodes) | Time series | `jvm_memory_bytes_used{area="heap", job=~"spark.*"}` by `instance` | Memory pressure tổng quan |
-| 15 | MinIO S3 Request Rate | Time series | `rate(minio_s3_requests_total[5m])` | Throughput API calls |
+| 14 | Spark JVM Heap (All nodes) | Time series | `jvm_memory_used_bytes{area="heap", job=~"spark.*"}` | Memory pressure tổng quan |
+| 15 | Request/Second to MinIO | Time series | `sum(rate(minio_s3_requests_total[5m]))` | Throughput API calls |
 | 16 | PostgreSQL Transactions/s | Time series | `rate(pg_stat_database_xact_commit{datname="airflow"}[5m])` | DB throughput |
 
 ## Ghi chú

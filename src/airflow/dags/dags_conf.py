@@ -6,11 +6,24 @@ SSH_CONN_ID = "spark_ssh"
 SSH_CMD_TIMEOUT = None
 SSH_CONN_TIMEOUT = 30
 
+JMX_AGENT = (
+    "-javaagent:/opt/bitnami/spark/custom-jars/"
+    "jmx_prometheus_javaagent-1.0.1.jar=9092:"
+    "/opt/bitnami/spark/jmx-exporter.yml"
+)
+
+DRIVER_JAVA_OPTS = (
+    "-Divy.message.logger.level=4 "
+    "-Dlog4j.configurationFile=/opt/bitnami/spark/conf/log4j2.properties "
+    f"{JMX_AGENT}"
+)
+
 SPARK_SUBMIT = (
     "cd /opt/bitnami/spark && "
     "PYTHONPATH=/opt/bitnami/spark "
     "/opt/bitnami/spark/bin/spark-submit "
     "--master spark://spark-master:7077 "
+    f"--conf 'spark.driver.extraJavaOptions={DRIVER_JAVA_OPTS}' "
 )
 
 DEFAULT_ARGS = {

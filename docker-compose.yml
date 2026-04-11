@@ -120,7 +120,8 @@ services:
     ports:
       - "8082:8080" # Cổng để xem giao diện quản lý của Master
       - "7077:7077" # Cổng để các worker và Airflow báo cáo cho Master
-      - "9091:9091" # Prometheus JMX metrics
+      - "9091:9091" # Prometheus JMX metrics (Master)
+      - "9092:9092" # Prometheus JMX metrics (Driver - chỉ khi spark-submit đang chạy)
     command: >
       bash -c "
       echo \"root:$$SPARK_SSH_PASSWORD\" | chpasswd &&
@@ -300,4 +301,3 @@ volumes:
   prometheus-data: # Lưu time series data của Prometheus
   minio-prometheus-token: # Chứa bearer token để Prometheus scrape MinIO metrics
   grafana-data: # Lưu dashboards, users, settings của Grafana
-
