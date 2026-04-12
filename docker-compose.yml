@@ -122,6 +122,7 @@ services:
       - "7077:7077" # Cổng để các worker và Airflow báo cáo cho Master
       - "9091:9091" # Prometheus JMX metrics (Master)
       - "9092:9092" # Prometheus JMX metrics (Driver - chỉ khi spark-submit đang chạy)
+      - "4040:4040" # Spark Driver UI + Prometheus executor metrics endpoint
     command: >
       bash -c "
       echo \"root:$$SPARK_SSH_PASSWORD\" | chpasswd &&

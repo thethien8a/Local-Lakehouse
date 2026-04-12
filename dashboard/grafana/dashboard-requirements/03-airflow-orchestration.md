@@ -46,7 +46,7 @@
 | 11 | Scheduler Loop Duration | Time series | `airflow_scheduler_loop_duration_seconds` | Mỗi vòng lặp mất bao lâu. >5s = scheduler quá tải |
 | 12 | Critical Section Duration | Time series | `airflow_scheduler_critical_section_duration_seconds` | Lock time trong scheduler. Cao = bottleneck |
 | 13 | Critical Section Query | Time series | `airflow_scheduler_critical_section_query_duration_seconds` | DB query time trong critical section |
-| 14 | Tasks Running | Stat | `airflow_scheduler_tasks_running` | Tasks đang chạy |
+| 14 | Tasks Running | Stat | `airflow_executor_running_tasks` | Tasks đang chạy |
 | 15 | Tasks Starving | Stat | `airflow_scheduler_tasks_starving` | Tasks không có slot. >0 = cần tăng pool/executor |
 | 16 | Orphaned Tasks Cleared | Time series | `rate(airflow_scheduler_orphaned_tasks_cleared_total[5m])` | Tasks bị mồ côi — thường do worker crash |
 
@@ -54,16 +54,8 @@
 
 | # | Panel | Type | Query | Mô tả |
 |---|-------|------|-------|-------|
-| 17 | Executor Slots | Time series (stacked) | `airflow_executor_open_slots`, `airflow_executor_queued_tasks`, `airflow_executor_running_tasks` | 3 series stack: open (green), running (blue), queued (yellow) |
-| 18 | Pool Utilization | Bar gauge | `airflow_pool_used_slots{pool=~"$pool"}` / (`airflow_pool_used_slots{pool=~"$pool"}` + `airflow_pool_open_slots{pool=~"$pool"}`) * 100 | % slot đã dùng mỗi pool |
-| 19 | Pool Detail | Table | `airflow_pool_open_slots`, `airflow_pool_used_slots`, `airflow_pool_queued_slots`, `airflow_pool_running_slots`, `airflow_pool_deferred_slots` by `pool` | Bảng chi tiết từng pool |
-
-### Row 6: Job Lifecycle
-
-| # | Panel | Type | Query | Mô tả |
-|---|-------|------|-------|-------|
-| 20 | Job Start Rate | Time series | `rate(airflow_job_start_total[5m])` by `job_type` | SchedulerJob, TriggererJob start rate |
-| 21 | Job End Rate | Time series | `rate(airflow_job_end_total[5m])` by `job_type` | Nếu start >> end = job bị treo |
+| 17 | Executor Slots | Time series (stacked) | `airflow_executor_open_slots`, `airflow_executor_queued_tasks`, `airflow_executor_running_tasks` | 3 series stack: open (green), running (blue), queued (yellow) |% slot đã dùng mỗi pool |
+| 19 | Pool Detail | Table | `airflow_pool_open_slots`, `airflow_pool_queued_slots`, `airflow_pool_running_slots`, `airflow_pool_deferred_slots` by `pool` | Bảng chi tiết từng pool |
 
 ## Alerts gợi ý
 - **Scheduler heartbeat = 0 trong 2 phút:** Scheduler chết, cần restart

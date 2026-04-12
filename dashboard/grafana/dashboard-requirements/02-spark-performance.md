@@ -52,13 +52,10 @@
 |---|-------|------|-------|-------|
 | 14 | DAGScheduler Active Jobs | Time series | `spark_dag_scheduler_activejobs` | Jobs đang chạy trong DAGScheduler |
 | 15 | DAGScheduler Active Stages | Time series | `spark_dag_scheduler_stages` | Stages đang active |
-| 16 | Executor Total Tasks | Time series | `rate(spark_executor_totaltasks[5m])` | Task throughput — đơn vị: tasks/s |
-| 17 | Executor Failed Tasks | Time series | `rate(spark_executor_failedtasks[5m])` | Task failures — phải gần 0 |
+| 16 | Executor Total Tasks | Time series | `rate(metrics_executor_totalTasks{job="spark-executor"}[5m])` | Task throughput — từ Spark UI /metrics/executors/prometheus |
+| 17 | Executor Failed Tasks | Time series | `rate(metrics_executor_failedTasks{job="spark-executor"}[5m])` | Task failures — từ Spark UI /metrics/executors/prometheus |
 | 18 | BlockManager Memory Used | Time series | `spark_block_manager_memory_memused_mb` | Cache memory (RDD, DataFrame) |
 | 19 | BlockManager Remaining | Time series | `spark_block_manager_memory_remainingmem_mb` | Bộ nhớ cache còn trống |
-| 20 | Shuffle Read | Time series | `rate(spark_shuffle_shuffle_read_bytes[5m])` | Data shuffle đọc giữa executors |
-| 21 | Shuffle Write | Time series | `rate(spark_shuffle_shuffle_write_bytes[5m])` | Data shuffle ghi giữa executors |
-
 ### Layout theo Row trên Grafana
 
 | Row | Tên | Panels (theo #) | Ghi chú |
@@ -67,7 +64,7 @@
 | 2 | JVM Memory | 4, 5, 9, 10 | Time series |
 | 3 | Garbage Collection | 11, 12, 13 | Dùng `$job` variable |
 | 4 | Spark Application Metrics | 14, 15, 16, 17 | Time series |
-| 5 | BlockManager & Shuffle | 18, 19, 20, 21 | Time series |
+| 5 | BlockManager | 18, 19 | Time series |
 
 ## Alerts gợi ý
 - **GC pause > 2s/min:** JVM đang chật, cần tăng heap hoặc giảm workload

@@ -16,13 +16,13 @@ rules:
     type: GAUGE
     help: "Spark DAGScheduler $2"
 
-  # Spark Executor metrics
-  - pattern: 'metrics<name=(.*)\.driver\.executor\.(.*)><>Value'
-    name: spark_executor_$2
+  # Spark ExecutorMetrics (driver-side memory/GC source — PascalCase, not "executor")
+  - pattern: 'metrics<name=(.*)\.driver\.ExecutorMetrics\.(.*)><>Value'
+    name: spark_driver_executor_metrics_$2
     labels:
       app: $1
     type: GAUGE
-    help: "Spark Executor $2"
+    help: "Spark Driver ExecutorMetrics $2"
 
   # Spark BlockManager
   - pattern: 'metrics<name=(.*)\.driver\.BlockManager\.(.*)><>Value'
@@ -43,15 +43,7 @@ rules:
     name: spark_worker_$1
     type: GAUGE
     help: "Spark Worker $1"
-
-  # Spark Shuffle metrics
-  - pattern: 'metrics<name=(.*)\.driver\.shuffleService\.(.*)><>Value'
-    name: spark_shuffle_$2
-    labels:
-      app: $1
-    type: GAUGE
-    help: "Spark Shuffle Service $2"
-
+  
   # Catch-all for remaining Spark metrics
   - pattern: 'metrics<name=(.*)><>Value'
     name: spark_$1

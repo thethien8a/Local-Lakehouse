@@ -69,9 +69,6 @@ mappings:
     help: "Total task instance successes"
 
   # Scheduler metrics
-  - match: "airflow.scheduler.tasks.running"
-    name: "airflow_scheduler_tasks_running"
-    help: "Number of running tasks"
 
   - match: "airflow.scheduler.tasks.starving"
     name: "airflow_scheduler_tasks_starving"
@@ -121,12 +118,6 @@ mappings:
       pool: "$1"
     help: "Number of open slots in pool"
 
-  - match: "airflow.pool.used_slots.*"
-    name: "airflow_pool_used_slots"
-    labels:
-      pool: "$1"
-    help: "Number of used slots in pool"
-
   - match: "airflow.pool.queued_slots.*"
     name: "airflow_pool_queued_slots"
     labels:
@@ -171,19 +162,6 @@ mappings:
   - match: "airflow.pool.scheduled_slots"
     name: "airflow_pool_total_scheduled_slots"
     help: "Total scheduled slots across all pools"
-
-  # Job metrics
-  - match: "airflow.job.start.*"
-    name: "airflow_job_start_total"
-    labels:
-      job_type: "$1"
-    help: "Job start count by type"
-
-  - match: "airflow.job.end.*"
-    name: "airflow_job_end_total"
-    labels:
-      job_type: "$1"
-    help: "Job end count by type"
 
   # Drop tất cả metric không match — tránh 500 Internal Server Error
   - match: "."
