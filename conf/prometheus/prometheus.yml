@@ -67,9 +67,47 @@ scrape_configs:
         target_label: instance
         replacement: 'airflow'
 
-  # MinIO (Native Prometheus endpoint, authenticated via bearer token)
-  - job_name: 'minio'
-    metrics_path: /minio/v2/metrics/cluster
+  # MinIO Metrics V3 — chia theo endpoint, mỗi job scrape 1 nhóm metrics
+
+  # Cluster health: capacity (total/free), drives, nodes
+  - job_name: 'minio-cluster-health'
+    metrics_path: /minio/metrics/v3/cluster/health
+    scheme: http
+    bearer_token_file: /etc/prometheus/minio-token/minio-token
+    static_configs:
+      - targets: ['minio:9000']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'minio'
+
+  # Bucket usage: size, object count per bucket
+  - job_name: 'minio-bucket-usage'
+    metrics_path: /minio/metrics/v3/cluster/usage/buckets
+    scheme: http
+    bearer_token_file: /etc/prometheus/minio-token/minio-token
+    static_configs:
+      - targets: ['minio:9000']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'minio'
+
+  # API requests: request count, errors, latency (TTFB), traffic bytes
+  - job_name: 'minio-api'
+    metrics_path: /minio/metrics/v3/api/requests
+    scheme: http
+    bearer_token_file: /etc/prometheus/minio-token/minio-token
+    static_configs:
+      - targets: ['minio:9000']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'minio'
+
+  # System process: uptime (start_time_seconds), memory, file descriptors
+  - job_name: 'minio-system'
+    metrics_path: /minio/metrics/v3/system/process
     scheme: http
     bearer_token_file: /etc/prometheus/minio-token/minio-token
     static_configs:
