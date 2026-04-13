@@ -1,0 +1,49 @@
+<section id="overview" class="sec">
+<div class="ctn">
+<div class="sec-h fade-in">
+<div class="tag" style="background:rgba(99,102,241,.15);color:var(--pl)">Tổng quan</div>
+<h2>Hệ thống là gì?</h2>
+<p>Một nền tảng Data Lakehouse end-to-end, xử lý dữ liệu chuyến taxi vàng (Yellow Taxi) của New York City — từ ingest dữ liệu thô đến dashboard phân tích.</p>
+<div style="display:flex;gap:16px;margin-top:16px;flex-wrap:wrap">
+<div style="display:flex;align-items:center;gap:6px;color:var(--g);font-size:.85rem"><span style="width:8px;height:8px;background:var(--g);border-radius:50%;display:inline-block"></span> Medallion Architecture</div>
+<div style="display:flex;align-items:center;gap:6px;color:var(--cy);font-size:.85rem"><span style="width:8px;height:8px;background:var(--cy);border-radius:50%;display:inline-block"></span> ACID Transactions</div>
+<div style="display:flex;align-items:center;gap:6px;color:var(--o);font-size:.85rem"><span style="width:8px;height:8px;background:var(--o);border-radius:50%;display:inline-block"></span> Automated ETL</div>
+<div style="display:flex;align-items:center;gap:6px;color:var(--pk);font-size:.85rem"><span style="width:8px;height:8px;background:var(--pk);border-radius:50%;display:inline-block"></span> Real-time Monitoring</div>
+</div>
+</div>
+<div class="g4 fade-in">
+<div class="card">
+<h3>🗄️ Apache Iceberg</h3>
+<p>Open table format hỗ trợ ACID transactions, time travel, schema evolution trên data lake</p>
+</div>
+<div class="card">
+<h3>⚡ Apache Spark</h3>
+<p>Distributed processing engine xử lý ETL cho cả 3 tầng Bronze, Silver, Gold</p>
+</div>
+<div class="card">
+<h3>🔄 Apache Airflow</h3>
+<p>Orchestration engine điều phối pipeline, SSH submit Spark jobs, trigger DAG chain</p>
+</div>
+<div class="card">
+<h3>🏷️ Project Nessie</h3>
+<p>Git-like catalog cho Iceberg — hỗ trợ branching, merging, WAP pattern cho data quality</p>
+</div>
+<div class="card">
+<h3>📦 MinIO</h3>
+<p>S3-compatible object storage lưu trữ data files và warehouse cho Iceberg tables</p>
+</div>
+<div class="card">
+<h3>🔍 Trino</h3>
+<p>Distributed SQL query engine đọc/phân tích dữ liệu từ Iceberg tables qua Nessie catalog</p>
+</div>
+<div class="card">
+<h3>📊 Metabase</h3>
+<p>BI Dashboard trực quan hoá dữ liệu taxi — KPI, heatmap, scatter plot, bar chart</p>
+</div>
+<div class="card">
+<h3>📈 Prometheus + Grafana</h3>
+<p>Monitoring toàn stack — Spark, Airflow, MinIO, PostgreSQL metrics & alerting</p>
+</div>
+</div>
+</div>
+</section>

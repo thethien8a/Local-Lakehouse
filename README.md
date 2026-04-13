@@ -1,134 +1,94 @@
-# NYC Taxi Lakehouse
+# NYC Taxi Data Lakehouse
 
-A production-ready **Modern Data Lakehouse** built with Apache Iceberg, Spark, and the Medallion Architecture.
+> Hệ thống Data Lakehouse end-to-end xử lý dữ liệu chuyến taxi vàng New York City sử dụng kiến trúc Medallion (Bronze → Silver → Gold).
 
-## Architecture
+## 📖 Documentation Website
 
-```
-                                    +------------------+
-                                    |     Metabase     |
-                                    |   (BI Dashboard) |
-                                    +--------+---------+
-                                             |
-+------------------+                +--------v---------+
-|   Landing Zone   |                |      Trino       |
-|  (Parquet/CSV)   |                |  (SQL Engine)    |
-+--------+---------+                +--------+---------+
-         |                                   |
-         v                                   v
-+--------+---------+     +----------+--------+---------+----------+
-|                  |     |          |                  |          |
-|   BRONZE Layer   +---->+  SILVER  +----------------->+   GOLD   |
-|   (Raw Data)     |     |  (Clean) |                  |  (Dims)  |
-|                  |     |          |                  |          |
-+--------+---------+     +----------+------------------+----------+
-         |                          |                  |
-         |            +-------------+------------------+
-         |            |
-         v            v
-+--------+------------+---------+
-|       Apache Iceberg          |
-|   (Table Format + Catalog)    |
-+--------+----------------------+
-         |
-+--------v---------+        +------------------+
-|     Nessie       |        |   MinIO (S3)     |
-|  (Git-like Cat.) |        |   (Storage)      |
-+------------------+        +------------------+
+👉 **[Click vào đây để xem toàn bộ hệ thống](https://thethien8a.github.io/Local-Lakehouse/)**
 
-+----------------------------------------------------------+
-|                    ORCHESTRATION                          |
-|  +------------+    +------------+    +-----------------+  |
-|  |  Airflow   +--->+ Spark SSH  +--->+ Spark Cluster   |  |
-|  | Scheduler  |    |  Submit    |    | (Master+Worker) |  |
-|  +------------+    +------------+    +-----------------+  |
-+----------------------------------------------------------+
+Website documentation được deploy trên GitHub Pages, mô tả chi tiết:
+- Kiến trúc Medallion (Bronze → Silver → Gold)
+- Data Pipeline & Feature Engineering
+- Star Schema Design & Dashboard Mapping
+- Airflow DAGs & Orchestration
+- Prometheus + Grafana Monitoring
+- Docker Services & Ports
+- Iceberg Table Maintenance
+- Quick Start Guide
 
-+----------------------------------------------------------+
-|                      MONITORING                           |
-|  +------------+    +------------+    +-----------------+  |
-|  | Prometheus +<---+ Exporters  +<---+ JMX / StatsD    |  |
-|  +------+-----+    +------------+    +-----------------+  |
-|         |                                                 |
-|  +------v-----+                                           |
-|  |  Grafana   |                                           |
-|  +------------+                                           |
-+----------------------------------------------------------+
-```
+## 🏗️ Tech Stack
 
-## Tech Stack
+| Component | Technology |
+|-----------|-----------|
+| Table Format | Apache Iceberg |
+| Processing | Apache Spark 3.5 |
+| Orchestration | Apache Airflow 2.10 |
+| Catalog | Project Nessie |
+| Storage | MinIO (S3-compatible) |
+| Query Engine | Trino |
+| BI Dashboard | Metabase |
+| Monitoring | Prometheus + Grafana |
+| Database | PostgreSQL 15 |
 
-| Layer | Technology | Purpose |
-|-------|------------|---------|
-| Storage | MinIO | S3-compatible object storage |
-| Table Format | Apache Iceberg | ACID transactions, time travel |
-| Catalog | Nessie | Git-like version control for data |
-| Processing | Apache Spark | Distributed ETL engine |
-| Query Engine | Trino | Fast SQL analytics |
-| Orchestration | Apache Airflow | Pipeline scheduling |
-| BI Dashboard | Metabase | Data visualization |
-| Monitoring | Prometheus + Grafana | Metrics & alerts |
-
-## Quick Start
+## 🚀 Quick Start
 
 ```bash
-# 1. Setup environment
+# 1. Clone repo
+git clone https://github.com/thethien8a/Local-Lakehouse.git
+cd Local-Lakehouse
+
+# 2. Cấu hình môi trường
 cp .env.example .env
-# Edit .env with your credentials
+# Điền credentials vào .env
 
-# 2. Start all services
-docker-compose up -d
+# 3. Tải dữ liệu NYC Taxi và các JAR dependencies
+python -m src.utils.download_data
+python -m src.utils.download_jars
 
-# 3. Access UIs
-# Airflow:   http://localhost:8080
-# Spark:     http://localhost:8082
-# Trino:     http://localhost:8083
-# MinIO:     http://localhost:9001
-# Metabase:  http://localhost:3000
-# Grafana:   http://localhost:3001
+# 4. Khởi chạy
+docker compose up -d
+
+# 5. Chia dữ liệu theo ngày (chạy trong Spark container)
+docker exec -it spark-master spark-submit /opt/bitnami/spark/src/utils/split_data_by_day.py
+
+# 6. Trigger ETL pipeline
+# Vào Airflow UI: http://localhost:8080
+# Trigger DAG bronze_ingestion với params date_from, date_to
 ```
 
-## Data Pipeline (Medallion)
-
-```
-Landing --> Bronze --> Silver --> Gold
-  |           |          |         |
-  Raw       Ingest     Clean    Aggregate
-Parquet    Iceberg   Validate   Dim Tables
-```
-
-| Layer | Input | Output | Operations |
-|-------|-------|--------|------------|
-| Bronze | `data/landing/*.parquet` | Iceberg raw tables | Schema enforcement |
-| Silver | Bronze tables | Cleaned Iceberg | Validation, dedup, null handling |
-| Gold | Silver tables | Dim/Fact tables | Aggregation, business logic |
-
-## Project Structure
+## 📁 Cấu trúc
 
 ```
 lakehouse/
+├── conf/              # Cấu hình services (Spark, Prometheus, Grafana, Trino...)
+├── dashboard/         # Grafana dashboard JSON + Metabase docs
+├── data/              # Dữ liệu thô + landing zone
+├── docker/            # Custom Dockerfiles
 ├── src/
-│   ├── pipeline/
-│   │   ├── bronze/          # Raw data ingestion
-│   │   ├── silver/          # Data cleaning & validation
-│   │   └── gold/            # Dimensional modeling
-│   ├── airflow/dags/        # DAG definitions
-│   ├── maintenance/         # Table maintenance (compact, expire)
-│   ├── config/              # Path configurations
-│   └── utils/               # Date utilities, data download
-├── conf/                    # Service configs (Spark, Prometheus, Trino)
-├── docker/                  # Dockerfiles
-├── data/                    # Sample data (NYC Taxi)
-└── docker-compose.yml
+│   ├── airflow/dags/  # Airflow DAGs (5 DAGs)
+│   ├── pipeline/      # ETL code (bronze/, silver/, gold/)
+│   ├── maintenance/   # Iceberg maintenance scripts
+│   ├── utils/         # Utility functions
+│   └── config/        # Path config
+├── docs/              # Website documentation (GitHub Pages)
+├── index.html         # Documentation entry point
+└── docker-compose.yml # 13 services orchestration
 ```
 
-## Key Features
+## 🌐 Service Ports
 
-- **WAP (Write-Audit-Publish)**: Each ingestion creates isolated branch via Nessie
-- **Incremental Processing**: Date-based partitioning with CLI args `--start/--end`
-- **Table Maintenance**: Automated compaction, snapshot expiry, orphan cleanup
-- **Full Observability**: JMX metrics, StatsD, Prometheus alerts
+| Port | Service |
+|------|---------|
+| 8080 | Airflow Web UI |
+| 8082 | Spark Master UI |
+| 8083 | Trino UI |
+| 3000 | Metabase |
+| 3001 | Grafana |
+| 9000 | MinIO API |
+| 9001 | MinIO Console |
+| 9090 | Prometheus |
+| 19120 | Nessie API |
 
-## License
+## 📄 License
 
-MIT
+This project is for educational purposes.

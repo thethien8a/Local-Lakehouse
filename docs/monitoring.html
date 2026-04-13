@@ -1,0 +1,69 @@
+<section id="monitoring" class="sec">
+<div class="ctn">
+<div class="sec-h fade-in">
+<div class="tag" style="background:rgba(239,68,68,.15);color:var(--r)">Monitoring</div>
+<h2>Prometheus + Grafana</h2>
+<p>Hệ thống monitoring toàn diện cho toàn bộ stack</p>
+</div>
+
+<div class="g2 fade-in">
+<div>
+<h3 style="margin-bottom:14px">📡 Prometheus Scrape Targets</h3>
+<table class="dt">
+<thead><tr><th>Job</th><th>Target</th><th>Mechanism</th></tr></thead>
+<tbody>
+<tr><td>Spark Master</td><td><code>spark-master:9091</code></td><td>JMX Exporter</td></tr>
+<tr><td>Spark Driver</td><td><code>spark-master:9092</code></td><td>JMX Exporter</td></tr>
+<tr><td>Spark Executor</td><td><code>spark-master:4040</code></td><td>Native Prometheus endpoint</td></tr>
+<tr><td>Spark Worker</td><td><code>spark-worker:9091</code></td><td>JMX Exporter</td></tr>
+<tr><td>Airflow</td><td><code>statsd-exporter:9102</code></td><td>StatsD → StatsD Exporter</td></tr>
+<tr><td>MinIO Cluster</td><td><code>minio:9000</code></td><td>Native + Bearer token</td></tr>
+<tr><td>MinIO Bucket</td><td><code>minio:9000</code></td><td>Native + Bearer token</td></tr>
+<tr><td>MinIO API</td><td><code>minio:9000</code></td><td>Native + Bearer token</td></tr>
+<tr><td>MinIO System</td><td><code>minio:9000</code></td><td>Native + Bearer token</td></tr>
+<tr><td>PostgreSQL</td><td><code>postgres-exporter:9187</code></td><td>postgres-exporter</td></tr>
+</tbody>
+</table>
+</div>
+
+<div>
+<h3 style="margin-bottom:14px">📊 Grafana Dashboards</h3>
+<div class="card" style="margin-bottom:10px"><h3>🏠 Lakehouse Overview</h3><p>Tổng quan toàn hệ thống — sức khỏe services, data throughput, storage usage</p></div>
+<div class="card" style="margin-bottom:10px"><h3>⚡ Apache Spark Performance</h3><p>Executor metrics, JVM memory, task duration, shuffle read/write</p></div>
+<div class="card" style="margin-bottom:10px"><h3>🔄 Airflow Orchestration</h3><p>DAG run success/fail rate, task duration, scheduler heartbeat, pool usage</p></div>
+<div class="card" style="margin-bottom:10px"><h3>📦 MinIO Storage</h3><p>Bucket size, object count, API latency, network traffic, capacity</p></div>
+<div class="alert alert-w" style="margin-top:12px">
+⚠️ MinIO metrics yêu cầu <strong>bearer token</strong> — tự động generate bởi <code>minio-init</code> container.
+</div>
+</div>
+</div>
+
+<h3 style="margin-top:28px;margin-bottom:14px" class="fade-in">🔔 Alert Rules</h3>
+<div class="fade-in">
+<div class="code">
+<span class="cm"># conf/prometheus/alerts/lakehouse.yml</span>
+<span class="cm"># Các rule alert quan trọng:</span>
+- Spark job failed / stuck
+- MinIO disk space low
+- Airflow scheduler heartbeat missing
+- PostgreSQL connections high
+</div>
+</div>
+
+<h3 style="margin-top:28px;margin-bottom:14px" class="fade-in">📊 Metrics Flow</h3>
+<div class="fade-in" style="display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap">
+<div class="arch-box" style="border-color:var(--o);background:rgba(249,115,22,.1);color:var(--o);font-size:.85rem">Spark<br>JMX Exporter</div>
+<div class="arch-box" style="border-color:var(--cy);background:rgba(6,182,212,.1);color:var(--cy);font-size:.85rem">Airflow<br>StatsD Exporter</div>
+<div class="arch-box" style="border-color:var(--b);background:rgba(59,130,246,.1);color:var(--b);font-size:.85rem">MinIO<br>Native + Bearer</div>
+<div class="arch-box" style="border-color:var(--pk);background:rgba(236,72,153,.1);color:var(--pk);font-size:.85rem">PostgreSQL<br>postgres-exporter</div>
+<span class="arch-arrow">→</span>
+<div class="arch-box" style="border-color:var(--r);background:rgba(239,68,68,.1);color:var(--r);font-size:.85rem">Prometheus<br>:9090</div>
+<span class="arch-arrow">→</span>
+<div class="arch-box" style="border-color:var(--y);background:rgba(234,179,8,.1);color:var(--y);font-size:.85rem">Grafana<br>:3001</div>
+</div>
+
+<div class="alert alert-i fade-in" style="margin-top:20px">
+<strong>Retention Policy:</strong> Prometheus giữ data 15 ngày (max 10GB). Grafana dashboards được provision tự động qua JSON files trong <code>dashboard/grafana/</code>.
+</div>
+</div>
+</section>

@@ -1,0 +1,82 @@
+<section id="architecture" class="sec">
+<div class="ctn">
+<div class="sec-h fade-in">
+<div class="tag" style="background:rgba(6,182,212,.15);color:var(--cy)">Kiến trúc</div>
+<h2>Medallion Architecture</h2>
+<p>Dữ liệu đi qua 3 tầng xử lý, mỗi tầng tăng chất lượng và giảm độ phức tạp</p>
+</div>
+
+<div style="background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:28px;overflow-x:auto" class="fade-in">
+<div style="display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin-bottom:20px">
+<div class="arch-box" style="border-color:var(--o);background:rgba(249,115,22,.1);color:var(--o)">📥 Landing Zone<br><small style="color:var(--txm)">Raw Parquet</small></div>
+<span class="arch-arrow">→</span>
+<div class="arch-box" style="border-color:#cd7f32;background:rgba(205,127,50,.1);color:#cd7f32">🥉 Bronze<br><small style="color:var(--txm)">Raw Ingestion</small></div>
+<span class="arch-arrow">→</span>
+<div class="arch-box" style="border-color:#c0c0c0;background:rgba(192,192,192,.1);color:#c0c0c0">🥈 Silver<br><small style="color:var(--txm)">Clean + Enrich</small></div>
+<span class="arch-arrow">→</span>
+<div class="arch-box" style="border-color:var(--y);background:rgba(234,179,8,.1);color:var(--y)">🥇 Gold<br><small style="color:var(--txm)">Star Schema</small></div>
+<span class="arch-arrow">→</span>
+<div class="arch-box" style="border-color:var(--pk);background:rgba(236,72,153,.1);color:var(--pk)">📊 Dashboard<br><small style="color:var(--txm)">Metabase / Trino</small></div>
+</div>
+
+<div class="g3" style="margin-top:20px">
+<div class="layer-card">
+<div class="layer-card-hd"><div class="dot" style="background:#cd7f32"></div><h3 style="color:#cd7f32">Bronze Layer</h3><span class="badge" style="background:rgba(205,127,50,.15);color:#cd7f32">nessie.taxi.bronze</span></div>
+<div class="layer-card-bd">
+<h4>Mục đích</h4>
+<ul>
+<li>Ingest dữ liệu thô từ Landing Zone (Parquet files)</li>
+<li>Thêm cột <code>ingestion_date</code> để partition</li>
+<li>Idempotent — bỏ qua ngày đã ingest</li>
+</ul>
+<h4 style="margin-top:10px">Đặc điểm</h4>
+<ul>
+<li>Append-only (không transform)</li>
+<li>Partition theo <code>ingestion_date</code></li>
+<li>Format: Parquet trên Iceberg</li>
+</ul>
+</div>
+</div>
+
+<div class="layer-card">
+<div class="layer-card-hd"><div class="dot" style="background:#c0c0c0"></div><h3 style="color:#c0c0c0">Silver Layer</h3><span class="badge" style="background:rgba(192,192,192,.15);color:#c0c0c0">nessie.taxi.silver</span></div>
+<div class="layer-card-bd">
+<h4>Mục đích</h4>
+<ul>
+<li>Làm sạch: loại null, lọc ID hợp lệ, loại giá trị âm</li>
+<li>Feature engineering: trip_id, trip_duration, avg_speed...</li>
+<li>WAP Pattern: tạo branch → validate → merge</li>
+</ul>
+<h4 style="margin-top:10px">Data Quality Rules</h4>
+<ul>
+<li>VendorID ∈ {1,2,6,7}</li>
+<li>RatecodeID ∈ {1,2,3,4,5,6,99}</li>
+<li>payment_type ∈ {0,1,2,3,4,5,6}</li>
+<li>fare_amount, total_amount, trip_distance &gt; 0</li>
+<li>pickup ≤ dropoff</li>
+</ul>
+</div>
+</div>
+
+<div class="layer-card">
+<div class="layer-card-hd"><div class="dot" style="background:var(--y)"></div><h3 style="color:var(--y)">Gold Layer</h3><span class="badge" style="background:rgba(234,179,8,.15);color:var(--y)">Star Schema</span></div>
+<div class="layer-card-bd">
+<h4>Mục đích</h4>
+<ul>
+<li>Tạo Star Schema phục vụ dashboard</li>
+<li>Fact table: <code>fact_trips</code></li>
+<li>Dim tables: <code>dim_zone</code>, <code>dim_payment</code>, <code>dim_date</code></li>
+<li>Aggregate: <code>agg_daily_summary</code></li>
+</ul>
+<h4 style="margin-top:10px">WAP Pattern</h4>
+<ul>
+<li>Tạo branch từ main</li>
+<li>Write data vào branch</li>
+<li>Merge branch về main khi thành công</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>

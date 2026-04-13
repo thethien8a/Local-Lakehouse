@@ -1,0 +1,52 @@
+<section id="orchestration" class="sec">
+<div class="ctn">
+<div class="sec-h fade-in">
+<div class="tag" style="background:rgba(249,115,22,.15);color:var(--o)">Orchestration</div>
+<h2>Airflow DAGs</h2>
+<p>Apache Airflow điều phối pipeline bằng SSHOperator — submit Spark jobs từ xa vào Spark Master</p>
+</div>
+
+<div style="background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:28px;overflow-x:auto" class="fade-in">
+<h4 style="margin-bottom:14px;color:var(--o)">🔄 ETL Pipeline Chain</h4>
+<div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap">
+<div class="dag-node" style="border-color:#cd7f32;color:#cd7f32;background:rgba(205,127,50,.1)">bronze_ingestion<br><small style="color:var(--txd)">SSH → spark-submit</small></div>
+<span class="arch-arrow">→</span>
+<div class="dag-node" style="border-color:#c0c0c0;color:#c0c0c0;background:rgba(192,192,192,.1)">trigger_silver<br><small style="color:var(--txd)">TriggerDagRun</small></div>
+<span class="arch-arrow">→</span>
+<div class="dag-node" style="border-color:#c0c0c0;color:#c0c0c0;background:rgba(192,192,192,.1)">silver_transformation<br><small style="color:var(--txd)">SSH → spark-submit</small></div>
+<span class="arch-arrow">→</span>
+<div class="dag-node" style="border-color:var(--y);color:var(--y);background:rgba(234,179,8,.1)">trigger_gold<br><small style="color:var(--txd)">TriggerDagRun</small></div>
+<span class="arch-arrow">→</span>
+<div class="dag-node" style="border-color:var(--y);color:var(--y);background:rgba(234,179,8,.1)">gold_aggregation<br><small style="color:var(--txd)">SSH → spark-submit</small></div>
+</div>
+
+<h4 style="margin-top:28px;margin-bottom:14px;color:var(--cy)">🛠️ Maintenance DAGs</h4>
+<div style="display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap">
+<div class="dag-node" style="border-color:var(--cy);color:var(--cy);background:rgba(6,182,212,.1)">maintenance_weekly<br><small style="color:var(--txd)">Chủ nhật 2:00 AM</small><br><small style="color:var(--g)">Compaction only</small></div>
+<div class="dag-node" style="border-color:var(--cy);color:var(--cy);background:rgba(6,182,212,.1)">maintenance_monthly<br><small style="color:var(--txd)">Ngày 1 hàng tháng 3:00 AM</small><br><small style="color:var(--o)">Expire + Orphan cleanup</small></div>
+</div>
+</div>
+
+<div class="alert alert-i fade-in" style="margin-top:16px">
+🔗 <strong>Cơ chế:</strong> Airflow Scheduler SSH vào <code>spark-master:22</code> → chạy <code>spark-submit</code> → Spark job xử lý data. DAG chain: Bronze tự trigger Silver, Silver tự trigger Gold (qua <code>TriggerDagRunOperator</code>).
+</div>
+
+<div class="alert alert-w fade-in" style="margin-top:16px">
+⚙️ <strong>SSH Connection:</strong> Airflow sử dụng <code>SSHOperator</code> kết nối đến <code>spark-master:22</code> với password từ <code>SPARK_SSH_PASSWORD</code> env var. Mỗi DAG chạy <code>spark-submit</code> với đường dẫn script tương ứng.
+</div>
+
+<h3 style="margin-top:28px;margin-bottom:14px" class="fade-in">📋 DAG Parameters</h3>
+<div class="fade-in" style="overflow-x:auto">
+<table class="dt">
+<thead><tr><th>DAG ID</th><th>Schedule</th><th>Parameters</th><th>Spark Script</th></tr></thead>
+<tbody>
+<tr><td><code>bronze_ingestion</code></td><td>Manual trigger</td><td>date_from, date_to</td><td>pipeline/bronze/ingest_bronze.py</td></tr>
+<tr><td><code>silver_transformation</code></td><td>Triggered by Bronze</td><td>date_from, date_to</td><td>pipeline/silver/ingest_silver.py</td></tr>
+<tr><td><code>gold_aggregation</code></td><td>Triggered by Silver</td><td>date_from, date_to</td><td>pipeline/gold/ingest_gold.py</td></tr>
+<tr><td><code>maintenance_weekly</code></td><td><code>0 2 * * 0</code></td><td>—</td><td>maintenance/run_maintenance.py --mode weekly</td></tr>
+<tr><td><code>maintenance_monthly</code></td><td><code>0 3 1 * *</code></td><td>—</td><td>maintenance/run_maintenance.py --mode monthly</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>

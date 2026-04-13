@@ -1,0 +1,51 @@
+<section id="star-schema" class="sec">
+<div class="ctn">
+<div class="sec-h fade-in">
+<div class="tag" style="background:rgba(234,179,8,.15);color:var(--y)">Data Model</div>
+<h2>Star Schema Design</h2>
+<p>Mô hình dữ liệu dạng sao tối ưu cho OLAP queries và dashboard</p>
+</div>
+
+<div style="background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:28px;text-align:center" class="fade-in">
+<div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin-bottom:16px">
+<div class="schema-sat"><h5>dim_zone</h5><p>LocationID (PK)<br>Borough, Zone<br>service_zone</p></div>
+<div class="schema-sat"><h5>dim_payment</h5><p>payment_type (PK)<br>payment_name</p></div>
+<div class="schema-sat"><h5>dim_date</h5><p>pickup_date + hour (PK)<br>weekday, is_weekend<br>time_bucket, is_rush_hour</p></div>
+</div>
+<div style="color:var(--txd);font-size:1.2rem;letter-spacing:8px">⬇ ⬇ ⬇</div>
+<div class="schema-ctr">
+<h4>fact_trips</h4>
+<p>trip_id (PK) | pickup_date | pulocation_id | dolocation_id | payment_type<br>trip_distance | fare_amount | total_amount | tip_amount | trip_duration_min</p>
+</div>
+<div style="color:var(--txd);font-size:1.2rem;margin-top:10px;letter-spacing:8px">⬇</div>
+<div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin-top:10px">
+<div class="schema-sat" style="border-color:var(--o)"><h5 style="color:var(--o)">agg_daily_summary</h5><p>pickup_date (PK)<br>total_trips, total_revenue<br>avg_revenue_per_trip<br>avg_distance_per_trip<br>avg_tip, total_fare</p></div>
+</div>
+</div>
+
+<div class="alert alert-i fade-in" style="margin-top:20px">
+💡 <strong>Grain:</strong> Mỗi dòng trong <code>fact_trips</code> = 1 chuyến taxi. <code>agg_daily_summary</code> giảm scan khi load dashboard — không cần quét toàn bộ fact table.
+</div>
+
+<h3 style="margin-top:32px;margin-bottom:16px" class="fade-in">📊 Dashboard Mapping</h3>
+<div class="fade-in" style="overflow-x:auto">
+<table class="dt">
+<thead><tr><th>Tầng</th><th>Component</th><th>Data Source</th><th>Table(s)</th></tr></thead>
+<tbody>
+<tr><td><span class="badge" style="background:rgba(59,130,246,.15);color:var(--b)">Tầng 1: KPI</span></td><td>Ngày trong tháng</td><td><code>pickup_date</code></td><td>fact_trips, agg_daily_summary</td></tr>
+<tr><td></td><td>Loại thanh toán</td><td><code>payment_type</code></td><td>fact_trips + dim_payment</td></tr>
+<tr><td></td><td>Khung giờ</td><td><code>time_bucket</code></td><td>fact_trips</td></tr>
+<tr><td></td><td>Total Trips</td><td>COUNT(*)</td><td>agg_daily_summary</td></tr>
+<tr><td></td><td>Total Revenue</td><td>SUM(total_amount)</td><td>agg_daily_summary</td></tr>
+<tr><td></td><td>Avg. Revenue / Trip</td><td>AVG(total_amount)</td><td>agg_daily_summary</td></tr>
+<tr><td></td><td>Avg. Distance / Trip</td><td>AVG(trip_distance)</td><td>agg_daily_summary</td></tr>
+<tr><td><span class="badge" style="background:rgba(34,197,94,.15);color:var(--g)">Tầng 2: Vận hành</span></td><td>Heatmap (Giờ × Thứ)</td><td>GROUP BY hour, weekday</td><td>fact_trips</td></tr>
+<tr><td></td><td>Line chart (Trips/ngày)</td><td>GROUP BY date</td><td>agg_daily_summary</td></tr>
+<tr><td><span class="badge" style="background:rgba(236,72,153,.15);color:var(--pk)">Tầng 3: Không gian</span></td><td>Top 10 pickup locations</td><td>GROUP BY pulocation_id</td><td>fact_trips + dim_zone</td></tr>
+<tr><td></td><td>Scatter (Distance vs Fare)</td><td>trip_distance, fare_amount</td><td>fact_trips</td></tr>
+<tr><td></td><td>Payment type share</td><td>GROUP BY payment_type</td><td>fact_trips + dim_payment</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>

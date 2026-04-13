@@ -1,0 +1,56 @@
+<section id="services" class="sec">
+<div class="ctn">
+<div class="sec-h fade-in">
+<div class="tag" style="background:rgba(139,92,246,.15);color:#a78bfa">Infrastructure</div>
+<h2>Docker Services & Ports</h2>
+<p>13 services chạy bằng Docker Compose — toàn bộ stack trên 1 máy</p>
+</div>
+
+<div class="port-grid fade-in">
+<div class="port-item"><div class="port-num">9000</div><div class="port-lbl">MinIO API (S3)</div></div>
+<div class="port-item"><div class="port-num">9001</div><div class="port-lbl">MinIO Console UI</div></div>
+<div class="port-item"><div class="port-num">19120</div><div class="port-lbl">Nessie Catalog API</div></div>
+<div class="port-item"><div class="port-num">8083</div><div class="port-lbl">Trino UI + SQL</div></div>
+<div class="port-item"><div class="port-num">3000</div><div class="port-lbl">Metabase Dashboard</div></div>
+<div class="port-item"><div class="port-num">8082</div><div class="port-lbl">Spark Master UI</div></div>
+<div class="port-item"><div class="port-num">7077</div><div class="port-lbl">Spark Master (Worker)</div></div>
+<div class="port-item"><div class="port-num">8081</div><div class="port-lbl">Spark Worker UI</div></div>
+<div class="port-item"><div class="port-num">4040</div><div class="port-lbl">Spark Driver UI</div></div>
+<div class="port-item"><div class="port-num">5432</div><div class="port-lbl">PostgreSQL (Airflow)</div></div>
+<div class="port-item"><div class="port-num">8080</div><div class="port-lbl">Airflow Web UI</div></div>
+<div class="port-item"><div class="port-num">9090</div><div class="port-lbl">Prometheus</div></div>
+<div class="port-item"><div class="port-num">3001</div><div class="port-lbl">Grafana</div></div>
+<div class="port-item"><div class="port-num">9187</div><div class="port-lbl">PostgreSQL Exporter</div></div>
+<div class="port-item"><div class="port-num">9102</div><div class="port-lbl">StatsD Exporter (Prom)</div></div>
+<div class="port-item"><div class="port-num">9125</div><div class="port-lbl">StatsD Exporter (UDP)</div></div>
+</div>
+
+<h3 style="margin-top:32px;margin-bottom:14px" class="fade-in">🐳 Docker Images</h3>
+<div class="fade-in" style="overflow-x:auto">
+<table class="dt">
+<thead><tr><th>Service</th><th>Image</th><th>Custom Dockerfile</th></tr></thead>
+<tbody>
+<tr><td>Spark</td><td><code>bitnamilegacy/spark:3.5.1</code></td><td>+ SSH server, env vars</td></tr>
+<tr><td>Airflow</td><td><code>apache/airflow:2.10.3</code></td><td>+ apache-airflow-providers-ssh</td></tr>
+<tr><td>Trino</td><td><code>trinodb/trino:443</code></td><td>+ gettext (envsubst)</td></tr>
+<tr><td>Nessie</td><td><code>ghcr.io/projectnessie/nessie:0.107.4</code></td><td>—</td></tr>
+<tr><td>MinIO</td><td><code>minio/minio:latest</code></td><td>—</td></tr>
+<tr><td>Prometheus</td><td><code>prom/prometheus:v3.1.0</code></td><td>—</td></tr>
+<tr><td>Grafana</td><td><code>grafana/grafana:11.4.0</code></td><td>—</td></tr>
+<tr><td>Metabase</td><td><code>metabase/metabase:v0.58.11</code></td><td>—</td></tr>
+<tr><td>PostgreSQL</td><td><code>postgres:15</code></td><td>—</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 style="margin-top:28px;margin-bottom:14px" class="fade-in">💾 Docker Volumes</h3>
+<div class="g3 fade-in">
+<div class="card"><h3>🗄️ minio-data</h3><p>Dữ liệu object storage (S3 buckets)</p></div>
+<div class="card"><h3>🗂️ nessie-data</h3><p>Catalog metadata (RocksDB) — bảng không mất khi restart</p></div>
+<div class="card"><h3>🐘 postgres-data</h3><p>Lịch sử chạy DAG của Airflow</p></div>
+<div class="card"><h3>📊 metabase-data</h3><p>Cấu hình Metabase (H2 embedded DB)</p></div>
+<div class="card"><h3>📜 spark-events</h3><p>Log lịch sử Spark (History Server)</p></div>
+<div class="card"><h3>📈 prometheus-data</h3><p>Time series data (retention 15 ngày, max 10GB)</p></div>
+</div>
+</div>
+</section>

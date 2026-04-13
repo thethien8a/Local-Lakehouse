@@ -1,0 +1,94 @@
+<section id="pipeline" class="sec">
+<div class="ctn">
+<div class="sec-h fade-in">
+<div class="tag" style="background:rgba(34,197,94,.15);color:var(--g)">Pipeline</div>
+<h2>Chi tiết Data Pipeline</h2>
+<p>Luồng xử lý dữ liệu từ raw đến analytics-ready</p>
+</div>
+
+<div class="g2 fade-in">
+<div>
+<h3 style="margin-bottom:14px;color:var(--g)">📥 Bronze Ingestion</h3>
+<div class="code">
+<span class="cm"># Luồng xử lý Bronze</span>
+Landing Zone (Parquet)
+  → Đọc dữ liệu theo ngày (partition)
+  → Thêm cột ingestion_date
+  → Append vào nessie.taxi.bronze
+  → Bỏ qua nếu ngày đã tồn tại (idempotent)
+
+<span class="cm"># File chính</span>
+src/pipeline/bronze/bronze_ingestion.py
+src/pipeline/bronze/ingest_bronze.py
+
+<span class="cm"># Partition</span>
+<span class="hi">PARTITIONED BY (ingestion_date)</span>
+</div>
+</div>
+
+<div>
+<h3 style="margin-bottom:14px;color:#c0c0c0">🧹 Silver Transformation</h3>
+<div class="code">
+<span class="cm"># Luồng xử lý Silver</span>
+nessie.taxi.bronze
+  → Lọc theo date range
+  → <span class="hi">clean_data()</span>: loại null, lọc ID, loại âm
+  → <span class="hi">feature_engineering()</span>: trip_id, duration, speed
+  → Deduplicate bằng Window (row_number)
+  → <span class="hi">WAP Pattern</span>:
+      CREATE BRANCH etl_silver_...
+      → Upsert (MERGE INTO)
+      → validate_silver()
+      → MERGE BRANCH vào main
+
+<span class="cm"># File chính</span>
+src/pipeline/silver/ingest_silver.py
+src/pipeline/silver/clean_before_ingest.py
+</div>
+</div>
+
+<div>
+<h3 style="margin-bottom:14px;color:var(--y)">🏆 Gold Aggregation</h3>
+<div class="code">
+<span class="cm"># Luồng xử lý Gold</span>
+nessie.taxi.silver
+  → Lọc theo date range
+  → <span class="hi">create_dim_tables()</span>:
+      dim_zone (từ CSV)
+      dim_payment (hardcoded)
+      dim_date (generated 2023-12 → 2025-01)
+  → <span class="hi">create_gold_tables()</span>:
+      fact_trips (select cột chính)
+      agg_daily_summary (groupBy + agg)
+  → <span class="hi">WAP Pattern</span>: branch → write → merge
+
+<span class="cm"># File chính</span>
+src/pipeline/gold/ingest_gold.py
+src/pipeline/gold/create_dim_tables.py
+src/pipeline/gold/create_gold_tables.py
+</div>
+</div>
+
+<div>
+<h3 style="margin-bottom:14px;color:var(--cy)">🔧 Feature Engineering</h3>
+<div class="code">
+<span class="cm"># Các cột mới tạo ở Silver layer</span>
+<span class="kw">trip_id</span>          = MD5(VendorID|pickup|dropoff|PU|DO|pax|dist|fare|tip|total|pay)
+<span class="kw">pickup_date</span>      = to_date(tpep_pickup_datetime)
+<span class="kw">trip_duration_min</span> = (dropoff - pickup) / 60
+<span class="kw">avg_speed_mph</span>    = trip_distance * 60 / trip_duration_min
+<span class="kw">fare_per_mile</span>     = total_amount / trip_distance
+<span class="kw">fare_per_min</span>      = total_amount / trip_duration_min
+<span class="kw">is_tip_more_total</span> = tip_amount > total_amount
+
+<span class="cm"># Rename cột chuẩn hoá</span>
+VendorID → vendor_id
+RatecodeID → ratecode_id
+PULocationID → pulocation_id
+DOLocationID → dolocation_id
+Airport_fee → airport_fee
+</div>
+</div>
+</div>
+</div>
+</section>

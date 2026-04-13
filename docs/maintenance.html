@@ -1,0 +1,96 @@
+<section id="maintenance" class="sec">
+<div class="ctn">
+<div class="sec-h fade-in">
+<div class="tag" style="background:rgba(6,182,212,.15);color:var(--cy)">Maintenance</div>
+<h2>Iceberg Table Maintenance</h2>
+<p>Bảo trì định kỳ giúp tối ưu hiệu năng đọc/ghi và giải phóng dung lượng lưu trữ</p>
+</div>
+
+<div class="g3 fade-in">
+<div class="layer-card">
+<div class="layer-card-hd"><div class="dot" style="background:var(--g)"></div><h3 style="color:var(--g)">Compaction</h3></div>
+<div class="layer-card-bd">
+<h4>Mục đích</h4>
+<ul>
+<li>Gộp small files thành larger files</li>
+<li>Tăng hiệu năng đọc (ít file hơn = ít seek hơn)</li>
+<li>Chạy hàng tuần (Chủ nhật 2:00 AM)</li>
+</ul>
+<h4 style="margin-top:10px">Cơ chế</h4>
+<ul>
+<li>rewriteDataFiles() gộp files &lt; 128MB</li>
+<li>Target file size: 128MB</li>
+<li>Chỉ gộp, không xóa data</li>
+</ul>
+</div>
+</div>
+
+<div class="layer-card">
+<div class="layer-card-hd"><div class="dot" style="background:var(--o)"></div><h3 style="color:var(--o)">Expire Snapshots</h3></div>
+<div class="layer-card-bd">
+<h4>Mục đích</h4>
+<ul>
+<li>Xóa snapshot history cũ để tiết kiệm metadata</li>
+<li>Giữ lại 10 snapshot gần nhất</li>
+<li>Chạy hàng tháng (ngày 1, 3:00 AM)</li>
+</ul>
+<h4 style="margin-top:10px">Cơ chế</h4>
+<ul>
+<li>expireSnapshots() xóa snapshot &gt; 30 ngày</li>
+<li>retainLast = 10 (luôn giữ 10 snapshot mới)</li>
+<li>Giải phóng metadata file size</li>
+</ul>
+</div>
+</div>
+
+<div class="layer-card">
+<div class="layer-card-hd"><div class="dot" style="background:var(--r)"></div><h3 style="color:var(--r)">Remove Orphan Files</h3></div>
+<div class="layer-card-bd">
+<h4>Mục đích</h4>
+<ul>
+<li>Xóa data files không còn được tham chiếu bởi bất kỳ snapshot nào</li>
+<li>Giải phóng dung lượng lưu trữ thực tế</li>
+<li>Chạy hàng tháng (sau expire snapshots)</li>
+</ul>
+<h4 style="margin-top:10px">Cơ chế</h4>
+<ul>
+<li>removeOrphanFiles() quét và xóa file mồ côi</li>
+<li>Chỉ chạy sau khi expire snapshots xong</li>
+<li>Thư mục data thực sự được giải phóng</li>
+</ul>
+</div>
+</div>
+</div>
+
+<h3 style="margin-top:28px;margin-bottom:14px" class="fade-in">📋 Bảng được bảo trì</h3>
+<div class="fade-in" style="overflow-x:auto">
+<table class="dt">
+<thead><tr><th>Table</th><th>Layer</th><th>Compaction</th><th>Expire</th><th>Orphan</th></tr></thead>
+<tbody>
+<tr><td><code>nessie.taxi.bronze</code></td><td>Bronze</td><td>✅</td><td>✅</td><td>✅</td></tr>
+<tr><td><code>nessie.taxi.silver</code></td><td>Silver</td><td>✅</td><td>✅</td><td>✅</td></tr>
+<tr><td><code>nessie.taxi.fact_trips</code></td><td>Gold</td><td>✅</td><td>✅</td><td>✅</td></tr>
+<tr><td><code>nessie.taxi.agg_daily_summary</code></td><td>Gold</td><td>✅</td><td>✅</td><td>✅</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3 style="margin-top:28px;margin-bottom:14px" class="fade-in">🔧 Script</h3>
+<div class="fade-in">
+<div class="code">
+<span class="cm"># src/maintenance/run_maintenance.py</span>
+<span class="cm"># Chạy thủ công:</span>
+spark-submit run_maintenance.py \
+  --mode weekly \
+  --tables nessie.taxi.bronze nessie.taxi.silver nessie.taxi.fact_trips nessie.taxi.agg_daily_summary
+
+<span class="cm"># Hoặc monthly:</span>
+spark-submit run_maintenance.py \
+  --mode monthly \
+  --tables nessie.taxi.bronze nessie.taxi.silver nessie.taxi.fact_trips nessie.taxi.agg_daily_summary \
+  --days-to-keep 30 \
+  --retain-last 10
+</div>
+</div>
+</div>
+</section>

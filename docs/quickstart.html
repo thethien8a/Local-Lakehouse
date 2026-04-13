@@ -1,0 +1,109 @@
+<section id="quickstart" class="sec">
+<div class="ctn">
+<div class="sec-h fade-in">
+<div class="tag" style="background:rgba(34,197,94,.15);color:var(--g)">Getting Started</div>
+<h2>Quick Start</h2>
+<p>Khởi chạy toàn bộ hệ thống trong vài bước</p>
+</div>
+
+<div class="alert alert-i fade-in" style="margin-bottom:24px">
+⚙️ <strong>Yêu cầu hệ thống:</strong> Docker Engine 24+, Docker Compose v2, tối thiểu 8 GB RAM (khuyến nghị 16 GB), 20 GB ổ đĩa trống.
+</div>
+
+<div class="timeline fade-in">
+<div class="timeline-item card" style="padding:14px 18px;margin-bottom:20px">
+<h4>1. Clone repository</h4>
+<p><code>git clone &lt;repo-url&gt; &amp;&amp; cd lakehouse</code></p>
+</div>
+<div class="timeline-item card" style="padding:14px 18px;margin-bottom:20px">
+<h4>2. Cấu hình môi trường</h4>
+<p><code>cp .env.example .env</code> — Điền credentials cho MinIO, PostgreSQL, Airflow, Grafana</p>
+</div>
+<div class="timeline-item card" style="padding:14px 18px;margin-bottom:20px">
+<h4>3. Khởi chạy toàn bộ stack</h4>
+<p><code>docker compose up -d</code> — 13 services sẽ tự động khởi động</p>
+</div>
+<div class="timeline-item card" style="padding:14px 18px;margin-bottom:20px">
+<h4>4. Đợi services sẵn sàng</h4>
+<p>Kiểm tra: <code>docker compose ps</code> — Đợi tất cả status = Running</p>
+</div>
+<div class="timeline-item card" style="padding:14px 18px;margin-bottom:20px">
+<h4>5. Chuẩn bị dữ liệu</h4>
+<p>Đặt file Parquet vào <code>data/</code>, chạy <code>split_data_by_day.py</code> để tạo Landing Zone</p>
+</div>
+<div class="timeline-item card" style="padding:14px 18px;margin-bottom:20px">
+<h4>6. Chạy ETL Pipeline</h4>
+<p>Vào Airflow UI (port 8080), trigger DAG <code>bronze_ingestion</code> với params date_from/date_to</p>
+</div>
+<div class="timeline-item card" style="padding:14px 18px;margin-bottom:20px">
+<h4>7. Xem dashboard</h4>
+<p>Metabase (port 3000) — kết nối Trino (port 8083) để truy vấn Iceberg tables</p>
+</div>
+</div>
+
+<h3 style="margin-top:28px;margin-bottom:14px" class="fade-in">📁 Cấu trúc thư mục</h3>
+<div class="fade-in">
+<div class="code">
+lakehouse/
+├── conf/                   <span class="cm"># Cấu hình cho các services</span>
+│   ├── spark-defaults.conf
+│   ├── log4j2.properties
+│   ├── metrics.properties
+│   ├── prometheus/
+│   │   ├── prometheus.yml
+│   │   └── alerts/lakehouse.yml
+│   ├── grafana/
+│   │   └── provisioning/datasources/prometheus.yml
+│   ├── trino/
+│   │   └── catalog/nessie.properties
+│   ├── jmx-exporter/spark.yml
+│   └── statsd/mapping.yml
+├── dashboard/              <span class="cm"># Grafana dashboard JSON + Metabase docs</span>
+│   ├── grafana/
+│   └── metabase/
+├── data/                   <span class="cm"># Dữ liệu thô + landing zone</span>
+│   ├── nyc_taxi_data.parquet
+│   ├── taxi_zone_lookup.csv
+│   └── landing/
+├── docker/                 <span class="cm"># Custom Dockerfiles</span>
+│   ├── airflow/Dockerfile
+│   ├── spark/Dockerfile
+│   └── trino/Dockerfile
+├── jars/                   <span class="cm"># JAR dependencies (Iceberg, Nessie, AWS...)</span>
+├── src/                    <span class="cm"># Source code chính</span>
+│   ├── airflow/dags/       <span class="cm"># Airflow DAGs</span>
+│   ├── config/             <span class="cm"># Path config</span>
+│   ├── maintenance/        <span class="cm"># Iceberg maintenance scripts</span>
+│   ├── notebooks/          <span class="cm"># Jupyter notebooks</span>
+│   ├── pipeline/           <span class="cm"># ETL pipeline code</span>
+│   │   ├── bronze/
+│   │   ├── silver/
+│   │   └── gold/
+│   ├── test/               <span class="cm"># Test &amp; debug scripts</span>
+│   └── utils/              <span class="cm"># Utility functions</span>
+├── docs/                   <span class="cm"># Website documentation (GitHub Pages)</span>
+├── docker-compose.yml      <span class="cm"># Orchestrates toàn bộ stack</span>
+├── .env.example            <span class="cm"># Template cho environment variables</span>
+└── index.html              <span class="cm"># Documentation entry point</span>
+</div>
+</div>
+
+<h3 style="margin-top:28px;margin-bottom:14px" class="fade-in">🔑 Environment Variables</h3>
+<div class="fade-in" style="overflow-x:auto">
+<table class="dt">
+<thead><tr><th>Variable</th><th>Mô tả</th><th>Default</th></tr></thead>
+<tbody>
+<tr><td><code>MINIO_ROOT_USER</code></td><td>MinIO access key</td><td>admin</td></tr>
+<tr><td><code>MINIO_ROOT_PASSWORD</code></td><td>MinIO secret key</td><td>—</td></tr>
+<tr><td><code>POSTGRES_USER</code></td><td>PostgreSQL user (Airflow DB)</td><td>airflow</td></tr>
+<tr><td><code>POSTGRES_PASSWORD</code></td><td>PostgreSQL password</td><td>—</td></tr>
+<tr><td><code>AIRFLOW_WWW_USER</code></td><td>Airflow Web UI username</td><td>airflow</td></tr>
+<tr><td><code>AIRFLOW_WWW_PASSWORD</code></td><td>Airflow Web UI password</td><td>—</td></tr>
+<tr><td><code>SPARK_SSH_PASSWORD</code></td><td>SSH password cho Spark Master</td><td>—</td></tr>
+<tr><td><code>GRAFANA_ADMIN_USER</code></td><td>Grafana admin username</td><td>admin</td></tr>
+<tr><td><code>GRAFANA_ADMIN_PASSWORD</code></td><td>Grafana admin password</td><td>—</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>

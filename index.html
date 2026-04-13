@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NYC Taxi Data Lakehouse - System Documentation</title>
+<link rel="stylesheet" href="docs/style.css">
+<style>html{scroll-behavior:smooth}</style>
+</head>
+<body>
+
+<!-- Hero -->
+<section class="hero">
+<h1>NYC Taxi Data Lakehouse</h1>
+<p>Hệ thống Data Lakehouse hoàn chỉnh sử dụng Apache Iceberg, Spark, Airflow, Trino, MinIO và Nessie — xử lý dữ liệu chuyến taxi New York theo kiến trúc Medallion (Bronze → Silver → Gold)</p>
+<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:16px">
+<span style="background:rgba(99,102,241,.15);color:#818cf8;padding:4px 12px;border-radius:20px;font-size:.78rem;font-weight:500">Apache Iceberg</span>
+<span style="background:rgba(6,182,212,.15);color:#06b6d4;padding:4px 12px;border-radius:20px;font-size:.78rem;font-weight:500">Spark 3.5</span>
+<span style="background:rgba(249,115,22,.15);color:#f97316;padding:4px 12px;border-radius:20px;font-size:.78rem;font-weight:500">Airflow 2.10</span>
+<span style="background:rgba(34,197,94,.15);color:#22c55e;padding:4px 12px;border-radius:20px;font-size:.78rem;font-weight:500">Trino</span>
+<span style="background:rgba(234,179,8,.15);color:#eab308;padding:4px 12px;border-radius:20px;font-size:.78rem;font-weight:500">MinIO</span>
+<span style="background:rgba(236,72,153,.15);color:#ec4899;padding:4px 12px;border-radius:20px;font-size:.78rem;font-weight:500">Nessie</span>
+</div>
+<div class="hero-stats">
+<div><div class="n">13</div><div class="l">Services</div></div>
+<div><div class="n">3</div><div class="l">Data Layers</div></div>
+<div><div class="n">5</div><div class="l">DAGs</div></div>
+<div><div class="n">4</div><div class="l">Grafana Dashboards</div></div>
+</div>
+</section>
+
+<!-- Nav -->
+<nav class="sticky-nav">
+<div class="nav-inner">
+<a href="#overview">Tổng quan</a>
+<a href="#architecture">Kiến trúc</a>
+<a href="#pipeline">Pipeline</a>
+<a href="#star-schema">Star Schema</a>
+<a href="#orchestration">Orchestration</a>
+<a href="#monitoring">Monitoring</a>
+<a href="#services">Services</a>
+<a href="#maintenance">Maintenance</a>
+<a href="#quickstart">Quick Start</a>
+</div>
+</nav>
+
+<!-- Content loaded dynamically -->
+<div id="content"></div>
+
+<!-- Footer -->
+<div class="footer">
+<p>NYC Taxi Data Lakehouse — Built with Apache Iceberg, Spark, Airflow, Trino, MinIO, Nessie</p>
+</div>
+
+<script>
+const sections = [
+  'docs/overview.html',
+  'docs/architecture.html',
+  'docs/pipeline.html',
+  'docs/schema.html',
+  'docs/orchestration.html',
+  'docs/monitoring.html',
+  'docs/services.html',
+  'docs/maintenance.html',
+  'docs/quickstart.html'
+];
+
+async function loadContent() {
+  const container = document.getElementById('content');
+  for (const url of sections) {
+    try {
+      const resp = await fetch(url);
+      const html = await resp.text();
+      container.insertAdjacentHTML('beforeend', html);
+    } catch (e) {
+      console.error('Failed to load:', url, e);
+    }
+  }
+  observeFadeIn();
+}
+
+function observeFadeIn() {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+}
+
+// Active nav link on scroll
+function updateNav() {
+  const links = document.querySelectorAll('.nav-inner a');
+  let current = '';
+  document.querySelectorAll('section[id]').forEach(sec => {
+    if (window.scrollY >= sec.offsetTop - 120) current = sec.id;
+  });
+  links.forEach(l => {
+    l.classList.toggle('active', l.getAttribute('href') === '#' + current);
+  });
+}
+
+window.addEventListener('scroll', updateNav);
+loadContent();
+</script>
+<button onclick="window.scrollTo({top:0,behavior:'smooth'})" id="btt" style="position:fixed;bottom:24px;right:24px;width:44px;height:44px;border-radius:50%;border:1px solid rgba(99,102,241,.4);background:rgba(30,41,59,.9);color:#818cf8;font-size:1.3rem;cursor:pointer;opacity:0;transition:.3s;backdrop-filter:blur(8px);z-index:200;display:flex;align-items:center;justify-content:center" title="Back to top">↑</button>
+<script>
+window.addEventListener('scroll',()=>{
+  document.getElementById('btt').style.opacity=window.scrollY>400?'1':'0';
+});
+</script>
+</body>
+</html>
